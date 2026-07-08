@@ -1,0 +1,349 @@
+import { isEventActive, isEventExpired } from "@/lib/domain/eventStatus";
+import { normalizeAnswer, normalizeRoomCode } from "@/lib/domain/normalize";
+import { calculateRanking } from "@/lib/domain/scoring";
+import { AppError } from "@/lib/server/errors";
+import { createMemoryRepository } from "@/lib/server/memoryRepository";
+import type { NazoroomRepository } from "@/lib/server/repository";
+import { buildExploredRoomCard } from "@/lib/server/repository";
+import { createSupabaseRepository } from "@/lib/server/supabaseRepository";
+import { createSupabaseAdminClient, hasSupabaseServerConfig } from "@/lib/supabase/server";
+import type {
+  EventRecord,
+  ExploreResponse,
+  JoinResponse,
+  RankingResponse,
+  RoomRecord,
+  StateResponse,
+  UnlockResponse
+} from "@/lib/types/app";
+import { parseAnswer, parseNickname, parseRoomCode } from "@/lib/validations/schemas";
+
+type ServiceOptions = {
+  now?: () => Date;
+};
+
+let repositorySingleton: NazoroomRepository | null = null;
+
+export function getNazoroomService() {
+  repositorySingleton ??= hasSupabaseServerConfig()
+    ? createSupabaseRepository(createSupabaseAdminClient())
+    : createMemoryRepository();
+
+  return createNazoroomService(repositorySingleton);
+}
+
+export function createNazoroomService(
+  repository: NazoroomRepository,
+  options: ServiceOptions = {}
+) {
+  const now = options.now ?? (() => new Date());
+
+  return {
+    async joinEvent(eventId: string, rawNickname: unknown): Promise<JoinResponse> {
+      const nickname = parseNickname(rawNickname);
+      const event = await getExistingEvent(repository, eventId);
+
+      if (!isEventActive(event, now())) {
+        throw new AppError(eventNotActiveMessage(event, now()), 409);
+      }
+
+      const player = await repository.upsertPlayer(eventId, nickname);
+
+      return {
+        player: {
+          id: player.id,
+          nickname: player.nickname
+        },
+        event: publicEvent(event, now())
+      };
+    },
+
+    async getState(eventId: string, playerId: string): Promise<StateResponse> {
+      const [event, player] = await Promise.all([
+        getExistingEvent(repository, eventId),
+        repository.getPlayer(eventId, playerId)
+      ]);
+
+      if (!player) {
+        throw new AppError("参加情報が確認できません。再参加してください。", 404);
+      }
+
+      const [explorationLogs, treasures, ranking] = await Promise.all([
+        repository.listExplorationCards(eventId, playerId),
+        repository.listPlayerTreasures(eventId, playerId),
+        isEventExpired(event, now()) ? calculateEventRanking(repository, eventId) : null
+      ]);
+
+      return {
+        event: publicEvent(event, now()),
+        player: {
+          id: player.id,
+          nickname: player.nickname
+        },
+        explorationLogs,
+        treasures: treasures.map((treasure) => ({
+          roomCode: treasure.roomCode,
+          name: treasure.treasureName,
+          description: treasure.treasureDescription,
+          unlockedAt: treasure.unlockedAt
+        })),
+        ranking
+      };
+    },
+
+    async explore(
+      eventId: string,
+      playerId: string,
+      rawRoomCode: unknown
+    ): Promise<ExploreResponse> {
+      const inputRoomCode = parseRoomCode(rawRoomCode);
+      const normalizedRoomCode = normalizeRoomCode(inputRoomCode);
+      const [event, player] = await Promise.all([
+        getExistingEvent(repository, eventId),
+        repository.getPlayer(eventId, playerId)
+      ]);
+
+      if (!player) {
+        throw new AppError("参加情報が確認できません。再参加してください。", 404);
+      }
+      if (!isEventActive(event, now())) {
+        throw new AppError(eventNotActiveMessage(event, now()), 409);
+      }
+
+      const room = await repository.getRoomByNormalizedCode(eventId, normalizedRoomCode);
+      const message = buildExploreMessage(inputRoomCode, room);
+      const log = await repository.createExplorationLog({
+        eventId,
+        playerId,
+        roomId: room?.id ?? null,
+        inputRoomCode,
+        normalizedRoomCode,
+        resultType: room?.exploreType ?? "not_found",
+        message
+      });
+
+      const unlocked = room
+        ? Boolean(await repository.getPlayerTreasure(eventId, playerId, room.id))
+        : false;
+      const card = buildExploredRoomCard({ log, room, unlocked });
+
+      return {
+        resultType: card.resultType,
+        message,
+        room: room ? publicRoomForExplore(room) : null,
+        card
+      };
+    },
+
+    async unlock(
+      eventId: string,
+      playerId: string,
+      rawRoomCode: unknown,
+      rawAnswer: unknown
+    ): Promise<UnlockResponse> {
+      const inputRoomCode = parseRoomCode(rawRoomCode);
+      const inputAnswer = parseAnswer(rawAnswer);
+      const normalizedRoomCode = normalizeRoomCode(inputRoomCode);
+      const normalizedAnswer = normalizeAnswer(inputAnswer);
+
+      const [event, player, room] = await Promise.all([
+        getExistingEvent(repository, eventId),
+        repository.getPlayer(eventId, playerId),
+        repository.getRoomByNormalizedCode(eventId, normalizedRoomCode)
+      ]);
+
+      if (!player) {
+        throw new AppError("参加情報が確認できません。再参加してください。", 404);
+      }
+
+      if (!isEventActive(event, now())) {
+        await repository.createUnlockAttempt({
+          eventId,
+          playerId,
+          roomId: room?.id ?? null,
+          inputRoomCode,
+          normalizedRoomCode,
+          inputAnswer,
+          normalizedAnswer,
+          result: "expired"
+        });
+        return {
+          result: "expired",
+          message: eventNotActiveMessage(event, now())
+        };
+      }
+
+      if (!room) {
+        await repository.createUnlockAttempt({
+          eventId,
+          playerId,
+          roomId: null,
+          inputRoomCode,
+          normalizedRoomCode,
+          inputAnswer,
+          normalizedAnswer,
+          result: "room_not_found"
+        });
+        return {
+          result: "room_not_found",
+          message: "この部屋番号に対応するロックは見つからなかった。"
+        };
+      }
+
+      const existingTreasure = await repository.getPlayerTreasure(
+        eventId,
+        playerId,
+        room.id
+      );
+      if (existingTreasure) {
+        await repository.createUnlockAttempt({
+          eventId,
+          playerId,
+          roomId: room.id,
+          inputRoomCode,
+          normalizedRoomCode,
+          inputAnswer,
+          normalizedAnswer,
+          result: "already_unlocked"
+        });
+        return {
+          result: "already_unlocked",
+          message: "この部屋の宝はすでに入手済みです。",
+          treasure: {
+            roomCode: existingTreasure.roomCode,
+            name: existingTreasure.treasureName,
+            description: existingTreasure.treasureDescription,
+            unlockedAt: existingTreasure.unlockedAt
+          }
+        };
+      }
+
+      const answers = await repository.listRoomAnswers(room.id);
+      const isCorrect = answers.some(
+        (answer) => answer.normalizedAnswer === normalizedAnswer
+      );
+
+      if (!isCorrect) {
+        await repository.createUnlockAttempt({
+          eventId,
+          playerId,
+          roomId: room.id,
+          inputRoomCode,
+          normalizedRoomCode,
+          inputAnswer,
+          normalizedAnswer,
+          result: "incorrect"
+        });
+        return {
+          result: "incorrect",
+          message: "解錠に失敗した。答えが違うようだ。"
+        };
+      }
+
+      const { treasure, created } = await repository.createPlayerTreasureIdempotent({
+        eventId,
+        playerId,
+        room
+      });
+      const result = created ? "correct" : "already_unlocked";
+
+      await repository.createUnlockAttempt({
+        eventId,
+        playerId,
+        roomId: room.id,
+        inputRoomCode,
+        normalizedRoomCode,
+        inputAnswer,
+        normalizedAnswer,
+        result
+      });
+
+      return {
+        result,
+        message: created
+          ? `解錠成功。宝『${treasure.treasureName}』を入手した。`
+          : "この部屋の宝はすでに入手済みです。",
+        treasure: {
+          roomCode: treasure.roomCode,
+          name: treasure.treasureName,
+          description: treasure.treasureDescription,
+          unlockedAt: treasure.unlockedAt
+        }
+      };
+    },
+
+    async ranking(eventId: string): Promise<RankingResponse> {
+      await getExistingEvent(repository, eventId);
+      return calculateEventRanking(repository, eventId);
+    }
+  };
+}
+
+async function getExistingEvent(repository: NazoroomRepository, eventId: string) {
+  const event = await repository.getEvent(eventId);
+  if (!event) {
+    throw new AppError("イベントが見つかりません。", 404);
+  }
+  return event;
+}
+
+async function calculateEventRanking(
+  repository: NazoroomRepository,
+  eventId: string
+): Promise<RankingResponse> {
+  const [players, rooms, treasures] = await Promise.all([
+    repository.listPlayers(eventId),
+    repository.listRooms(eventId),
+    repository.listAllTreasures(eventId)
+  ]);
+
+  return calculateRanking({ players, rooms, treasures });
+}
+
+function publicEvent(event: EventRecord, serverNow: Date) {
+  return {
+    ...event,
+    serverNow: serverNow.toISOString()
+  };
+}
+
+function publicRoomForExplore(room: RoomRecord): ExploreResponse["room"] {
+  if (room.exploreType === "hidden_clue") {
+    return {
+      roomCode: room.roomCode,
+      title: room.title,
+      displayMode: "hidden"
+    };
+  }
+
+  return {
+    roomCode: room.roomCode,
+    title: room.title,
+    puzzleText: room.puzzleText,
+    puzzleImageUrl: room.puzzleImageUrl,
+    displayMode: "visible"
+  };
+}
+
+function buildExploreMessage(inputRoomCode: string, room: RoomRecord | null) {
+  if (!room) {
+    return `部屋 ${inputRoomCode} を探索した。しかし、この番号に対応する部屋は見つからなかった。`;
+  }
+
+  if (room.exploreType === "hidden_clue") {
+    return (
+      room.hiddenMessage ??
+      `部屋 ${room.roomCode} の扉に近づいた。画面上にはロックが表示されない。だが、周囲に何か違和感がある。`
+    );
+  }
+
+  return `部屋 ${room.roomCode} のロックを発見した。`;
+}
+
+function eventNotActiveMessage(event: EventRecord, at: Date) {
+  if (isEventExpired(event, at)) {
+    return "制限時間が終了したため、解錠できない。";
+  }
+
+  return "イベントはまだ開始されていません。";
+}
