@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --background: #f7faf9;
+  --foreground: #19202a;
+  --panel: #ffffff;
+  --line: #d8e3df;
+  --accent: #008a72;
+  --accent-strong: #006c5b;
+  --danger: #b42318;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family:
+    var(--font-geist-sans),
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.snap-row {
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+}
+
+.snap-card {
+  scroll-snap-align: start;
+}
+
+.focus-ring:focus-visible {
+  outline: 3px solid rgb(0 138 114 / 0.28);
+  outline-offset: 2px;
+}
