@@ -1,8 +1,12 @@
+import { join } from "node:path";
 import { isEventActive, isEventExpired } from "@/lib/domain/eventStatus";
 import { normalizeAnswer, normalizeRoomCode } from "@/lib/domain/normalize";
 import { calculateRanking } from "@/lib/domain/scoring";
 import { AppError } from "@/lib/server/errors";
-import { createMemoryRepository } from "@/lib/server/memoryRepository";
+import {
+  createMemoryRepository,
+  createSeedMemoryState
+} from "@/lib/server/memoryRepository";
 import type { NazoroomRepository } from "@/lib/server/repository";
 import { buildExploredRoomCard } from "@/lib/server/repository";
 import { createSupabaseRepository } from "@/lib/server/supabaseRepository";
@@ -27,7 +31,9 @@ let repositorySingleton: NazoroomRepository | null = null;
 export function getNazoroomService() {
   repositorySingleton ??= hasSupabaseServerConfig()
     ? createSupabaseRepository(createSupabaseAdminClient())
-    : createMemoryRepository();
+    : createMemoryRepository(createSeedMemoryState(), {
+        persistPath: join(process.cwd(), ".next", "nazoroom-memory.json")
+      });
 
   return createNazoroomService(repositorySingleton);
 }

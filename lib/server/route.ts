@@ -13,6 +13,18 @@ export async function getEventId(context: EventRouteContext): Promise<string> {
   return params.eventId;
 }
 
+export async function readJsonObject(request: Request): Promise<Record<string, unknown>> {
+  const text = await request.text();
+  if (!text.trim()) {
+    return {};
+  }
+
+  const parsed = JSON.parse(text) as unknown;
+  return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+    ? (parsed as Record<string, unknown>)
+    : {};
+}
+
 export function jsonError(error: unknown) {
   if (error instanceof ValidationError || error instanceof AppError) {
     return NextResponse.json({ message: error.message }, { status: error.status });

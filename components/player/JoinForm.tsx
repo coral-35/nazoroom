@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import type { JoinResponse } from "@/lib/types/app";
 
 type JoinFormProps = {
@@ -13,6 +13,11 @@ export function JoinForm({ eventId }: JoinFormProps) {
   const [nickname, setNickname] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,6 +65,7 @@ export function JoinForm({ eventId }: JoinFormProps) {
       <label className="grid gap-2 text-sm font-semibold">
         ニックネーム
         <input
+          name="nickname"
           value={nickname}
           onChange={(event) => setNickname(event.target.value)}
           maxLength={32}
@@ -75,7 +81,7 @@ export function JoinForm({ eventId }: JoinFormProps) {
       ) : null}
       <button
         type="submit"
-        disabled={busy}
+        disabled={busy || !mounted}
         className="focus-ring mt-5 w-full rounded-md bg-[#008a72] px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
       >
         {busy ? "参加中..." : "参加する"}

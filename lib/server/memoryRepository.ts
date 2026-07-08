@@ -1,3 +1,5 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { DEFAULT_EVENT_ID } from "@/lib/types/app";
 import type {
   EventRecord,
@@ -22,6 +24,10 @@ export type MemoryState = {
   explorationLogs: ExplorationLogRecord[];
   playerTreasures: PlayerTreasureRecord[];
   unlockAttempts: UnlockAttemptRecord[];
+};
+
+type MemoryRepositoryOptions = {
+  persistPath?: string;
 };
 
 const ROOM_305_ID = "10000000-0000-0000-0000-000000000001";
@@ -111,16 +117,19 @@ export function createSeedMemoryState(now: Date = new Date()): MemoryState {
 }
 
 export function createMemoryRepository(
-  initialState: MemoryState = createSeedMemoryState()
+  initialState: MemoryState = createSeedMemoryState(),
+  options: MemoryRepositoryOptions = {}
 ): NazoroomRepository {
-  const state = initialState;
+  let state = loadState(options.persistPath) ?? initialState;
 
   return {
     async getEvent(eventId) {
+      readLatest();
       return state.events.find((event) => event.id === eventId) ?? null;
     },
 
     async upsertPlayer(eventId, nickname) {
+      readLatest();
       const existing = state.players.find(
         (player) => player.eventId === eventId && player.nickname === nickname
       );
@@ -135,10 +144,12 @@ export function createMemoryRepository(
         createdAt: new Date().toISOString()
       };
       state.players.push(player);
+      persist();
       return player;
     },
 
     async getPlayer(eventId, playerId) {
+      readLatest();
       return (
         state.players.find(
           (player) => player.eventId === eventId && player.id === playerId
@@ -147,6 +158,7 @@ export function createMemoryRepository(
     },
 
     async getRoomByNormalizedCode(eventId, normalizedRoomCode) {
+      readLatest();
       return (
         state.rooms.find(
           (room) =>
@@ -158,16 +170,19 @@ export function createMemoryRepository(
     },
 
     async createExplorationLog(input) {
+      readLatest();
       const log: ExplorationLogRecord = {
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
         ...input
       };
       state.explorationLogs.push(log);
+      persist();
       return log;
     },
 
     async listExplorationCards(eventId, playerId) {
+      readLatest();
       const unlockedRoomIds = new Set(
         state.playerTreasures
           .filter(
@@ -192,6 +207,7 @@ export function createMemoryRepository(
     },
 
     async listPlayerTreasures(eventId, playerId) {
+      readLatest();
       return state.playerTreasures
         .filter(
           (treasure) =>
@@ -204,22 +220,26 @@ export function createMemoryRepository(
     },
 
     async listRoomAnswers(roomId) {
+      readLatest();
       return state.roomAnswers
         .filter((answer) => answer.roomId === roomId)
         .map((answer) => ({ normalizedAnswer: answer.normalizedAnswer }));
     },
 
     async createUnlockAttempt(input) {
+      readLatest();
       const attempt: UnlockAttemptRecord = {
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
         ...input
       };
       state.unlockAttempts.push(attempt);
+      persist();
       return attempt;
     },
 
     async getPlayerTreasure(eventId, playerId, roomId) {
+      readLatest();
       return (
         state.playerTreasures.find(
           (treasure) =>
@@ -231,6 +251,7 @@ export function createMemoryRepository(
     },
 
     async createPlayerTreasureIdempotent(input) {
+      readLatest();
       const existing = await this.getPlayerTreasure(
         input.eventId,
         input.playerId,
@@ -242,27 +263,55 @@ export function createMemoryRepository(
 
       const treasure = makeTreasure(input);
       state.playerTreasures.push(treasure);
+      persist();
       return { treasure, created: true };
     },
 
     async listPlayers(eventId) {
+      readLatest();
       return state.players
         .filter((player) => player.eventId === eventId)
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     },
 
     async listRooms(eventId) {
+      readLatest();
       return state.rooms
         .filter((room) => room.eventId === eventId && room.isActive)
         .sort((a, b) => a.sortOrder - b.sortOrder);
     },
 
     async listAllTreasures(eventId) {
+      readLatest();
       return state.playerTreasures
         .filter((treasure) => treasure.eventId === eventId)
         .sort((a, b) => a.unlockedAt.localeCompare(b.unlockedAt));
     }
   };
+
+  function readLatest() {
+    const persisted = loadState(options.persistPath);
+    if (persisted) {
+      state = persisted;
+    }
+  }
+
+  function persist() {
+    if (!options.persistPath) {
+      return;
+    }
+
+    mkdirSync(dirname(options.persistPath), { recursive: true });
+    writeFileSync(options.persistPath, JSON.stringify(state), "utf8");
+  }
+}
+
+function loadState(persistPath?: string): MemoryState | null {
+  if (!persistPath || !existsSync(persistPath)) {
+    return null;
+  }
+
+  return JSON.parse(readFileSync(persistPath, "utf8")) as MemoryState;
 }
 
 function createAnswer(

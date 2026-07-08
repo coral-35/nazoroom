@@ -18,21 +18,33 @@ import type {
 
 type PlayerAppProps = {
   eventId: string;
+  initialPlayerId?: string | null;
+  initialState?: StateResponse | null;
 };
 
-export function PlayerApp({ eventId }: PlayerAppProps) {
-  const [playerId, setPlayerId] = useState<string | null>(null);
-  const [state, setState] = useState<StateResponse | null>(null);
-  const [cards, setCards] = useState<ExploredRoomCard[]>([]);
-  const [treasures, setTreasures] = useState<TreasureItem[]>([]);
-  const [ranking, setRanking] = useState<RankingResponse | null>(null);
+export function PlayerApp({
+  eventId,
+  initialPlayerId = null,
+  initialState = null
+}: PlayerAppProps) {
+  const [playerId, setPlayerId] = useState<string | null>(initialPlayerId);
+  const [state, setState] = useState<StateResponse | null>(initialState);
+  const [cards, setCards] = useState<ExploredRoomCard[]>(
+    initialState?.explorationLogs ?? []
+  );
+  const [treasures, setTreasures] = useState<TreasureItem[]>(
+    initialState?.treasures ?? []
+  );
+  const [ranking, setRanking] = useState<RankingResponse | null>(
+    initialState?.ranking ?? null
+  );
   const [roomCode, setRoomCode] = useState("");
   const [answer, setAnswer] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialState);
   const [exploreBusy, setExploreBusy] = useState(false);
   const [unlockBusy, setUnlockBusy] = useState(false);
-  const [timeUp, setTimeUp] = useState(false);
+  const [timeUp, setTimeUp] = useState(initialState ? isExpired(initialState) : false);
 
   const loadState = useCallback(
     async (id: string) => {
@@ -68,7 +80,8 @@ export function PlayerApp({ eventId }: PlayerAppProps) {
   );
 
   useEffect(() => {
-    const fromUrl = new URLSearchParams(window.location.search).get("playerId");
+    const fromUrl =
+      initialPlayerId ?? new URLSearchParams(window.location.search).get("playerId");
     const stored = localStorage.getItem(`nazoroom.player.${eventId}`);
     const id = fromUrl ?? stored;
 
@@ -78,8 +91,13 @@ export function PlayerApp({ eventId }: PlayerAppProps) {
     }
 
     setPlayerId(id);
+    if (initialState && id === initialPlayerId) {
+      setLoading(false);
+      return;
+    }
+
     void loadState(id);
-  }, [eventId, loadState]);
+  }, [eventId, initialPlayerId, initialState, loadState]);
 
   const disabled = loading || timeUp || !state;
   const eventTitle = state?.event.title ?? "宝探しイベント";

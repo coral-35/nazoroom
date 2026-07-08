@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 import { getNazoroomService } from "@/lib/server/service";
-import { getEventId, jsonError, type EventRouteContext } from "@/lib/server/route";
+import {
+  getEventId,
+  jsonError,
+  readJsonObject,
+  type EventRouteContext
+} from "@/lib/server/route";
 
 export async function POST(request: Request, context: EventRouteContext) {
   try {
     const eventId = await getEventId(context);
-    const body = await request.json();
+    const body = await readJsonObject(request);
     const response = await getNazoroomService().unlock(
       eventId,
-      body.playerId,
+      typeof body.playerId === "string" ? body.playerId : "",
       body.roomCode,
       body.answer
     );
