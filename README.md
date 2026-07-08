@@ -35,7 +35,13 @@ npm run lint
 npm run test
 ```
 
-E2E は Playwright のブラウザが必要です。
+E2E は Playwright のブラウザと起動済み dev server が必要です。
+
+```bash
+npm run dev
+```
+
+別のターミナルで実行します。
 
 ```bash
 npm run test:e2e
