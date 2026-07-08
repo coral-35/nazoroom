@@ -1,0 +1,74 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import type { EventStatus } from "@/lib/types/app";
+
+type CountdownTimerProps = {
+  status?: EventStatus;
+  endsAt: string | null;
+  onExpire: () => void;
+};
+
+export function CountdownTimer({ status, endsAt, onExpire }: CountdownTimerProps) {
+  const [remainingMs, setRemainingMs] = useState(() => calculateRemaining(endsAt));
+  const expiredOnce = useRef(false);
+
+  useEffect(() => {
+    setRemainingMs(calculateRemaining(endsAt));
+    expiredOnce.current = false;
+  }, [endsAt]);
+
+  useEffect(() => {
+    if (!endsAt || status === "ended") {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      const nextRemaining = calculateRemaining(endsAt);
+      setRemainingMs(nextRemaining);
+
+      if (nextRemaining <= 0 && !expiredOnce.current) {
+        expiredOnce.current = true;
+        onExpire();
+      }
+    }, 1_000);
+
+    return () => window.clearInterval(intervalId);
+  }, [endsAt, onExpire, status]);
+
+  if (!endsAt) {
+    return (
+      <div className="rounded-md bg-[#e9f6f2] px-3 py-2 text-right">
+        <p className="text-xs font-semibold text-[#006c5b]">残り時間</p>
+        <p className="text-lg font-bold">制限なし</p>
+      </div>
+    );
+  }
+
+  const expired = status === "ended" || remainingMs <= 0;
+
+  return (
+    <div className="rounded-md bg-[#e9f6f2] px-3 py-2 text-right">
+      <p className="text-xs font-semibold text-[#006c5b]">残り時間</p>
+      <p className="text-lg font-bold tabular-nums">
+        {expired ? "終了" : formatRemaining(remainingMs)}
+      </p>
+    </div>
+  );
+}
+
+function calculateRemaining(endsAt: string | null) {
+  if (!endsAt) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return Math.max(0, new Date(endsAt).getTime() - Date.now());
+}
+
+function formatRemaining(ms: number) {
+  const totalSeconds = Math.ceil(ms / 1_000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
