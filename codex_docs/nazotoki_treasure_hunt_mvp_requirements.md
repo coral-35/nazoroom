@@ -63,12 +63,12 @@ MVPでは、次の状態を完成とする。
 |---|---|
 | フロントエンド | Next.js App Router |
 | 言語 | TypeScript |
-| UI | React / Tailwind CSS |
+| UI | React / グローバルCSS |
 | バックエンド | Next.js Route Handlers |
 | DB / Auth | Supabase |
 | ORM | 原則 Supabase client。必要な場合のみ型補助を追加 |
 | テスト | Vitest / React Testing Library / Playwright |
-| Lint / Format | ESLint / Prettier |
+| Lint / Format | ESLint |
 | デプロイ想定 | Vercel + Supabase |
 | ローカルDB | Supabase CLI / Docker ベースのローカルSupabase |
 
@@ -1234,9 +1234,11 @@ lib/
   types/
     app.ts
 supabase/
+  config.toml
   migrations/
     0001_initial_schema.sql
   seed.sql
+  schema.sql
 tests/
   unit/
     normalize.test.ts
@@ -1257,7 +1259,7 @@ Codex は以下の順で実装する。
 ### Phase 1: 土台
 
 1. 既存プロジェクト構成を確認する。
-2. Next.js / TypeScript / Tailwind / Supabase の設定を確認する。
+2. Next.js / TypeScript / グローバルCSS / Supabase の設定を確認する。
 3. 必要な環境変数を整理する。
 4. DB migration を作成する。
 5. seed データを作成する。
@@ -1465,4 +1467,3 @@ MVP後に検討する。
 - `hidden_clue` はアプリ上に謎を表示しないが、解錠対象としては有効にする。
 - DBに存在しない部屋番号と、`hidden_clue` の部屋を混同しない。
 - 管理画面が未完成でも、seed データでプレイヤーフローを確認できるようにする。
-

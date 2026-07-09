@@ -3,13 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3001",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --port 3001",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --configLoader runner",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "supabase:start": "supabase start",
+    "supabase:status": "supabase status",
+    "supabase:reset": "supabase db reset",
+    "supabase:stop": "supabase stop"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
@@ -24,6 +28,7 @@
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "eslint": "^9.25.1",
+    "supabase": "^2.107.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.31.0",
     "vitest": "^3.1.2"

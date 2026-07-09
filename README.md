@@ -6,36 +6,70 @@
 
 - Next.js App Router
 - TypeScript / React
-- Supabase Postgres
+- Supabase Postgres / Auth / Storage
+- Next.js Route Handlers
 - CSSフレームワークなしのグローバルCSS
 
 `../nazoapp` と比較し、アプリ本体のスタックは Next.js / React / TypeScript / Supabase / 通常CSS に寄せています。
-Tailwind CSS / PostCSS は使いません。ESLint、Vitest、Playwright は品質確認用の開発ツールとして残しています。
+Tailwind CSS / PostCSS / Prisma / 独自バックエンドサーバーは使いません。ESLint、Vitest、Playwright は品質確認用の開発ツールとして残しています。
+
+## ローカルSupabase
+
+NazoRoom は2つ目のアプリとして、`../nazoapp` と同時起動できるように Supabase と Next.js のポートを分けています。
+
+| 用途 | ポート | URL |
+|---|---:|---|
+| Supabase API | 55321 | `http://127.0.0.1:55321` |
+| Postgres DB | 55322 | `postgresql://postgres:postgres@127.0.0.1:55322/postgres` |
+| Supabase Studio | 55323 | `http://127.0.0.1:55323` |
+| メール確認サーバー | 55324 | `http://127.0.0.1:55324` |
+| Analytics | 55327 | internal/local |
+| Shadow DB | 55320 | local migration/diff用 |
+| Next.js | 3001 | `http://localhost:3001` |
+
+`.env.local` はローカルSupabase用、`.env.remote.local` はリモートSupabase用の退避ファイルとして使います。
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:55321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<npx supabase status の anon key>
+SUPABASE_SERVICE_ROLE_KEY=<npx supabase status の service_role key>
+NEXT_PUBLIC_APP_URL=http://localhost:3001
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` はサーバー専用です。クライアントコンポーネントや `NEXT_PUBLIC_` 付き変数には出しません。
 
 ## 実行
 
 ```bash
 npm install
+npx supabase start
+npx supabase status
+npx supabase db reset
 npm run dev
 ```
 
-Supabase 環境変数が未設定の場合は、seed 相当のメモリデータで動作します。
-テストイベントは以下です。
+アプリは `http://localhost:3001`、Supabase Studio は `http://127.0.0.1:55323` で開きます。
+
+`npx supabase status` の `anon key` と `service_role key` を `.env.local` に反映してから `npm run dev` を起動してください。
+
+開発用のテストイベントは以下です。
 
 - イベントID: `00000000-0000-0000-0000-000000000001`
 - 謎表示部屋: `305` / 正解 `ひかり`
 - 現地探索型部屋: `204` / 正解 `ほし`
 - 正規化確認用部屋: `A-01` / 正解 `たいよう`
 
-## Supabase
+## Supabase運用
 
-Supabase を使う場合は `.env.example` を参考に環境変数を設定し、migration と seed を適用します。
+DB変更は `supabase/migrations/*.sql` に追加し、新規環境の全体像は `supabase/schema.sql` に追従させます。
 
 ```bash
-supabase db reset
+npx supabase db reset
 ```
 
 重要データへのアクセスは Route Handler 側に寄せています。`room_answers` はクライアントに返さず、解答判定もサーバー側で行います。
+
+本番利用を前提にしているため、Supabase 環境変数が未設定の実行時メモリフォールバックは使いません。単体/APIテストではインメモリRepositoryを直接注入します。
 
 ## チェック
 
@@ -45,7 +79,7 @@ npm run lint
 npm run test
 ```
 
-E2E は Playwright のブラウザと起動済み dev server が必要です。
+E2E はローカルSupabaseを `db reset` 済みの状態にし、起動済み dev server に対して実行します。
 
 ```bash
 npm run dev
@@ -56,3 +90,8 @@ npm run dev
 ```bash
 npm run test:e2e
 ```
+
+## 参照資料
+
+- `C:\Users\coral\hobby_dev\nazoapp\nazotoki_codex_docs\local-supabase-development-guide.md`
+- `codex_docs/local-supabase-settings.md`
