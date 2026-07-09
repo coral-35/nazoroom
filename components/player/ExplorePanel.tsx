@@ -27,16 +27,16 @@ export function ExplorePanel({
   const unlockDisabled = disabled || unlockBusy || !roomCode.trim() || !answer.trim();
 
   return (
-    <div className="grid gap-2 rounded-lg border border-[#d8e3df] bg-white p-3 shadow-soft">
-      <div className="grid grid-cols-[5.4rem_minmax(0,1fr)_5rem] items-center gap-2">
-        <label htmlFor="room-code" className="text-sm font-bold">
+    <div className="explore-panel">
+      <div className="explore-row">
+        <label htmlFor="room-code" className="explore-label">
           部屋番号
         </label>
         <input
           id="room-code"
           value={roomCode}
           onChange={(event) => onRoomCodeChange(event.target.value)}
-          className="focus-ring min-w-0 rounded-md border border-[#c6d5d0] px-3 py-3"
+          className="input"
           placeholder="305"
           inputMode="text"
           autoCapitalize="characters"
@@ -45,20 +45,20 @@ export function ExplorePanel({
           type="button"
           onClick={onExplore}
           disabled={exploreDisabled}
-          className="focus-ring rounded-md bg-[#008a72] px-3 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-45"
+          className="button button--primary button--compact"
         >
           {exploreBusy ? "探索中" : "探索"}
         </button>
       </div>
-      <div className="grid grid-cols-[5.4rem_minmax(0,1fr)_5rem] items-center gap-2">
-        <label htmlFor="answer" className="text-sm font-bold">
+      <div className="explore-row">
+        <label htmlFor="answer" className="explore-label">
           解答
         </label>
         <input
           id="answer"
           value={answer}
           onChange={(event) => onAnswerChange(event.target.value)}
-          className="focus-ring min-w-0 rounded-md border border-[#c6d5d0] px-3 py-3"
+          className="input"
           placeholder="ひかり"
           inputMode="text"
         />
@@ -66,7 +66,7 @@ export function ExplorePanel({
           type="button"
           onClick={onUnlock}
           disabled={unlockDisabled}
-          className="focus-ring rounded-md bg-[#19202a] px-3 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-45"
+          className="button button--dark button--compact"
         >
           {unlockBusy ? "解錠中" : "解錠"}
         </button>

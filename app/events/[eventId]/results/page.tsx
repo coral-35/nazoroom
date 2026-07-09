@@ -11,15 +11,15 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
   const { eventId } = await params;
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-3xl px-5 py-6">
-      <div className="mb-5 flex items-center justify-between gap-3">
+    <main className="page-shell page-shell--wide">
+      <div className="page-header">
         <div>
-          <p className="text-sm font-semibold text-[#008a72]">結果</p>
-          <h1 className="text-2xl font-bold">ランキング</h1>
+          <p className="kicker">結果</p>
+          <h1 className="section-title">ランキング</h1>
         </div>
         <Link
           href={`/events/${eventId}/join`}
-          className="focus-ring rounded-md border border-[#d8e3df] px-3 py-2 text-sm font-semibold"
+          className="button button--secondary button--compact"
         >
           参加へ
         </Link>

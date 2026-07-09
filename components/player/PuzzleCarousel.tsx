@@ -22,7 +22,7 @@ export function PuzzleCarousel({ cards, latestCard, loading }: PuzzleCarouselPro
 
   if (loading) {
     return (
-      <div className="flex min-h-[340px] items-center justify-center rounded-lg border border-[#d8e3df] bg-white p-5 text-sm font-semibold text-neutral-600">
+      <div className="puzzle-placeholder">
         探索ログを読み込み中...
       </div>
     );
@@ -30,10 +30,10 @@ export function PuzzleCarousel({ cards, latestCard, loading }: PuzzleCarouselPro
 
   if (cards.length === 0) {
     return (
-      <div className="flex min-h-[340px] flex-col justify-center rounded-lg border border-dashed border-[#b7c9c3] bg-white p-5">
-        <p className="text-sm font-semibold text-[#008a72]">探索ログ</p>
-        <h2 className="mt-2 text-xl font-bold">まだ部屋を探索していません</h2>
-        <p className="mt-2 leading-7 text-neutral-700">
+      <div className="puzzle-empty">
+        <p className="kicker">探索ログ</p>
+        <h2 className="card-title">まだ部屋を探索していません</h2>
+        <p className="lead">
           部屋番号を入力して探索すると、ここにログや謎カードが残ります。
         </p>
       </div>
@@ -41,11 +41,11 @@ export function PuzzleCarousel({ cards, latestCard, loading }: PuzzleCarouselPro
   }
 
   return (
-    <div className="rounded-lg border border-[#d8e3df] bg-white p-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
+    <div className="puzzle-panel">
+      <div className="panel-header">
         <div>
-          <p className="text-xs font-semibold text-[#008a72]">探索ログ</p>
-          <h2 className="text-lg font-bold">見つけた部屋</h2>
+          <p className="kicker">探索ログ</p>
+          <h2 className="card-title">見つけた部屋</h2>
         </div>
         <button
           type="button"
@@ -55,12 +55,12 @@ export function PuzzleCarousel({ cards, latestCard, loading }: PuzzleCarouselPro
               behavior: "smooth"
             })
           }
-          className="focus-ring rounded-md border border-[#d8e3df] px-3 py-2 text-sm font-semibold"
+          className="button button--secondary button--compact"
         >
           最新へ
         </button>
       </div>
-      <div ref={rowRef} className="snap-row flex gap-3 overflow-x-auto pb-2">
+      <div ref={rowRef} className="snap-row puzzle-row">
         {cards.map((card, index) => (
           <PuzzleCard
             key={card.logId}

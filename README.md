@@ -2,6 +2,16 @@
 
 部屋番号を探索し、謎の解答で宝を集める Next.js / TypeScript / Supabase アプリです。
 
+## 技術スタック
+
+- Next.js App Router
+- TypeScript / React
+- Supabase Postgres
+- CSSフレームワークなしのグローバルCSS
+
+`../nazoapp` と比較し、アプリ本体のスタックは Next.js / React / TypeScript / Supabase / 通常CSS に寄せています。
+Tailwind CSS / PostCSS は使いません。ESLint、Vitest、Playwright は品質確認用の開発ツールとして残しています。
+
 ## 実行
 
 ```bash

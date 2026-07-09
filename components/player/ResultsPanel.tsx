@@ -37,7 +37,7 @@ export function ResultsPanel({ eventId }: ResultsPanelProps) {
 
   if (error) {
     return (
-      <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 font-semibold text-[#b42318]">
+      <p className="message message--error">
         {error}
       </p>
     );

@@ -38,9 +38,9 @@ export function CountdownTimer({ status, endsAt, onExpire }: CountdownTimerProps
 
   if (!endsAt) {
     return (
-      <div className="rounded-md bg-[#e9f6f2] px-3 py-2 text-right">
-        <p className="text-xs font-semibold text-[#006c5b]">残り時間</p>
-        <p className="text-lg font-bold">制限なし</p>
+      <div className="timer-box">
+        <p className="timer-label">残り時間</p>
+        <p className="timer-value">制限なし</p>
       </div>
     );
   }
@@ -48,9 +48,9 @@ export function CountdownTimer({ status, endsAt, onExpire }: CountdownTimerProps
   const expired = status === "ended" || remainingMs <= 0;
 
   return (
-    <div className="rounded-md bg-[#e9f6f2] px-3 py-2 text-right">
-      <p className="text-xs font-semibold text-[#006c5b]">残り時間</p>
-      <p className="text-lg font-bold tabular-nums">
+    <div className="timer-box">
+      <p className="timer-label">残り時間</p>
+      <p className="timer-value">
         {expired ? "終了" : formatRemaining(remainingMs)}
       </p>
     </div>

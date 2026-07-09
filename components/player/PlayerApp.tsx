@@ -206,15 +206,15 @@ export function PlayerApp({
 
   if (!playerId && !loading) {
     return (
-      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-8">
-        <section className="rounded-lg border border-[#d8e3df] bg-white p-6 shadow-soft">
-          <h1 className="text-2xl font-bold">参加情報がありません</h1>
-          <p className="mt-3 leading-7 text-neutral-700">
+      <main className="page-shell page-shell--center">
+        <section className="panel">
+          <h1 className="section-title">参加情報がありません</h1>
+          <p className="lead">
             先にニックネームを登録してから探索を開始してください。
           </p>
           <Link
             href={`/events/${eventId}/join`}
-            className="focus-ring mt-6 block rounded-md bg-[#008a72] px-4 py-3 text-center font-semibold text-white"
+            className="button button--primary"
           >
             参加画面へ
           </Link>
@@ -224,13 +224,13 @@ export function PlayerApp({
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-4 py-4 sm:px-5">
-      <header className="mb-3 rounded-lg border border-[#d8e3df] bg-white p-4">
-        <div className="flex items-start justify-between gap-3">
+    <main className="play-shell">
+      <header className="player-header">
+        <div className="player-header-row">
           <div>
-            <p className="text-xs font-semibold text-[#008a72]">プレイヤー画面</p>
-            <h1 className="mt-1 text-xl font-bold">{eventTitle}</h1>
-            <p className="mt-1 text-sm text-neutral-600">
+            <p className="kicker">プレイヤー画面</p>
+            <h1 className="card-title">{eventTitle}</h1>
+            <p className="muted">
               {state?.player.nickname ?? "読み込み中"} / 宝 {treasureCount}個
             </p>
           </div>
@@ -248,16 +248,16 @@ export function PlayerApp({
       </header>
 
       {feedback ? (
-        <p className="mb-3 rounded-md border border-[#d8e3df] bg-white px-3 py-2 text-sm font-semibold">
+        <p className="message message--notice">
           {feedback}
         </p>
       ) : null}
 
-      <section className="min-h-[360px] flex-1">
+      <section className="puzzle-stage">
         <PuzzleCarousel cards={cards} latestCard={latestCard} loading={loading} />
       </section>
 
-      <section className="sticky bottom-0 -mx-4 mt-4 border-t border-[#d8e3df] bg-[#f7faf9]/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
+      <section className="control-bar">
         <ExplorePanel
           roomCode={roomCode}
           answer={answer}
@@ -271,12 +271,12 @@ export function PlayerApp({
         />
       </section>
 
-      <section className="mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+      <section className="dashboard-grid">
         <TreasureList treasures={treasures} />
         {timeUp || ranking ? (
           <RankingTable ranking={ranking} />
         ) : (
-          <div className="rounded-lg border border-[#d8e3df] bg-white p-4 text-sm leading-7 text-neutral-700">
+          <div className="panel panel--tight muted">
             ランキングは制限時間終了後に表示されます。
           </div>
         )}

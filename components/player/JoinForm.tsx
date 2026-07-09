@@ -58,31 +58,28 @@ export function JoinForm({ eventId }: JoinFormProps) {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-lg border border-[#d8e3df] bg-white p-5 shadow-soft"
-    >
-      <label className="grid gap-2 text-sm font-semibold">
+    <form onSubmit={handleSubmit} className="panel form">
+      <label className="field">
         ニックネーム
         <input
           name="nickname"
           value={nickname}
           onChange={(event) => setNickname(event.target.value)}
           maxLength={32}
-          className="focus-ring rounded-md border border-[#c6d5d0] px-4 py-3 text-base"
+          className="input"
           placeholder="テスト太郎"
           autoComplete="nickname"
         />
       </label>
       {error ? (
-        <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm font-semibold text-[#b42318]">
+        <p className="message message--error">
           {error}
         </p>
       ) : null}
       <button
         type="submit"
         disabled={busy || !mounted}
-        className="focus-ring mt-5 w-full rounded-md bg-[#008a72] px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
+        className="button button--primary button--full"
       >
         {busy ? "参加中..." : "参加する"}
       </button>
