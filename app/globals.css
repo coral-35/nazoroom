@@ -449,6 +449,10 @@ img {
   gap: 8px;
 }
 
+.explore-feedback {
+  margin: 4px 0 0;
+}
+
 .explore-label {
   font-size: 0.92rem;
   font-weight: 900;

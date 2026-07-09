@@ -157,7 +157,7 @@ export type ExploreResponse = {
     puzzleImageUrl?: string | null;
     displayMode: "hidden" | "visible";
   };
-  card: ExploredRoomCard;
+  card: ExploredRoomCard | null;
 };
 
 export type UnlockResponse = {

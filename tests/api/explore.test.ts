@@ -14,7 +14,11 @@ describe("explore service", () => {
 
     expect(result.resultType).toBe("not_found");
     expect(result.room).toBeNull();
+    expect(result.card).toBeNull();
     expect(result.message).toContain("見つからなかった");
+
+    const state = await service.getState(DEFAULT_EVENT_ID, joined.player.id);
+    expect(state.explorationLogs).toHaveLength(0);
   });
 
   it("returns hidden clue without puzzle body", async () => {
@@ -29,7 +33,7 @@ describe("explore service", () => {
       title: "現地探索型の謎",
       displayMode: "hidden"
     });
-    expect(result.card.puzzleText).toBeUndefined();
+    expect(result.card?.puzzleText).toBeUndefined();
   });
 
   it("returns visible puzzle cards and keeps repeated exploration logs", async () => {

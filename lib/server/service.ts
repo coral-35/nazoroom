@@ -109,25 +109,32 @@ export function createNazoroomService(
 
       const room = await repository.getRoomByNormalizedCode(eventId, normalizedRoomCode);
       const message = buildExploreMessage(inputRoomCode, room);
+      if (!room) {
+        return {
+          resultType: "not_found",
+          message,
+          room: null,
+          card: null
+        };
+      }
+
       const log = await repository.createExplorationLog({
         eventId,
         playerId,
-        roomId: room?.id ?? null,
+        roomId: room.id,
         inputRoomCode,
         normalizedRoomCode,
-        resultType: room?.exploreType ?? "not_found",
+        resultType: room.exploreType,
         message
       });
 
-      const unlocked = room
-        ? Boolean(await repository.getPlayerTreasure(eventId, playerId, room.id))
-        : false;
+      const unlocked = Boolean(await repository.getPlayerTreasure(eventId, playerId, room.id));
       const card = buildExploredRoomCard({ log, room, unlocked });
 
       return {
         resultType: card.resultType,
         message,
-        room: room ? publicRoomForExplore(room) : null,
+        room: publicRoomForExplore(room),
         card
       };
     },

@@ -7,6 +7,7 @@ type ExplorePanelProps = {
   onAnswerChange: (value: string) => void;
   onExplore: () => void;
   onUnlock: () => void;
+  feedback: string | null;
   exploreBusy: boolean;
   unlockBusy: boolean;
   disabled: boolean;
@@ -19,6 +20,7 @@ export function ExplorePanel({
   onAnswerChange,
   onExplore,
   onUnlock,
+  feedback,
   exploreBusy,
   unlockBusy,
   disabled
@@ -71,6 +73,11 @@ export function ExplorePanel({
           {unlockBusy ? "解錠中" : "解錠"}
         </button>
       </div>
+      {feedback ? (
+        <p className="message message--notice explore-feedback">
+          {feedback}
+        </p>
+      ) : null}
     </div>
   );
 }

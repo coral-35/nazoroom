@@ -125,7 +125,10 @@ export function PlayerApp({
       }
 
       const explored = data as ExploreResponse;
-      setCards((current) => [...current, explored.card]);
+      const exploredCard = explored.card;
+      if (exploredCard) {
+        setCards((current) => [...current, exploredCard]);
+      }
       setFeedback(explored.message);
     } catch (caught) {
       setFeedback(
@@ -247,12 +250,6 @@ export function PlayerApp({
         </div>
       </header>
 
-      {feedback ? (
-        <p className="message message--notice">
-          {feedback}
-        </p>
-      ) : null}
-
       <section className="puzzle-stage">
         <PuzzleCarousel cards={cards} latestCard={latestCard} loading={loading} />
       </section>
@@ -265,6 +262,7 @@ export function PlayerApp({
           onAnswerChange={setAnswer}
           onExplore={handleExplore}
           onUnlock={handleUnlock}
+          feedback={feedback}
           exploreBusy={exploreBusy}
           unlockBusy={unlockBusy}
           disabled={disabled}
