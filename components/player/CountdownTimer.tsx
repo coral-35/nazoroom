@@ -10,20 +10,18 @@ type CountdownTimerProps = {
 };
 
 export function CountdownTimer({ status, endsAt, onExpire }: CountdownTimerProps) {
-  const [remainingMs, setRemainingMs] = useState(() => calculateRemaining(endsAt));
+  const [remainingMs, setRemainingMs] = useState<number | null>(null);
   const expiredOnce = useRef(false);
 
   useEffect(() => {
-    setRemainingMs(calculateRemaining(endsAt));
     expiredOnce.current = false;
-  }, [endsAt]);
 
-  useEffect(() => {
     if (!endsAt || status === "ended") {
+      setRemainingMs(null);
       return;
     }
 
-    const intervalId = window.setInterval(() => {
+    const tick = () => {
       const nextRemaining = calculateRemaining(endsAt);
       setRemainingMs(nextRemaining);
 
@@ -31,7 +29,10 @@ export function CountdownTimer({ status, endsAt, onExpire }: CountdownTimerProps
         expiredOnce.current = true;
         onExpire();
       }
-    }, 1_000);
+    };
+
+    tick();
+    const intervalId = window.setInterval(tick, 1_000);
 
     return () => window.clearInterval(intervalId);
   }, [endsAt, onExpire, status]);
@@ -45,13 +46,13 @@ export function CountdownTimer({ status, endsAt, onExpire }: CountdownTimerProps
     );
   }
 
-  const expired = status === "ended" || remainingMs <= 0;
+  const expired = status === "ended" || (remainingMs !== null && remainingMs <= 0);
 
   return (
     <div className="timer-box">
       <p className="timer-label">残り時間</p>
       <p className="timer-value">
-        {expired ? "終了" : formatRemaining(remainingMs)}
+        {expired ? "終了" : remainingMs === null ? "--:--" : formatRemaining(remainingMs)}
       </p>
     </div>
   );

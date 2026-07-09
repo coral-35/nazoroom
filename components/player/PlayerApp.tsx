@@ -290,8 +290,12 @@ function isExpired(state: StateResponse) {
     return true;
   }
 
+  const referenceTime = state.event.serverNow
+    ? new Date(state.event.serverNow).getTime()
+    : Date.now();
+
   return state.event.endsAt
-    ? new Date(state.event.endsAt).getTime() <= Date.now()
+    ? new Date(state.event.endsAt).getTime() <= referenceTime
     : false;
 }
 
