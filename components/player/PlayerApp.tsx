@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CountdownTimer } from "@/components/player/CountdownTimer";
 import { ExplorePanel } from "@/components/player/ExplorePanel";
 import { PuzzleCarousel } from "@/components/player/PuzzleCarousel";
 import { RankingTable } from "@/components/player/RankingTable";
 import { TreasureList } from "@/components/player/TreasureList";
+import { sortExploredRoomCards } from "@/lib/domain/explorationCards";
 import type {
   ExploredRoomCard,
   ExploreResponse,
@@ -30,7 +31,7 @@ export function PlayerApp({
   const [playerId, setPlayerId] = useState<string | null>(initialPlayerId);
   const [state, setState] = useState<StateResponse | null>(initialState);
   const [cards, setCards] = useState<ExploredRoomCard[]>(
-    initialState?.explorationLogs ?? []
+    sortExploredRoomCards(initialState?.explorationLogs ?? [])
   );
   const [treasures, setTreasures] = useState<TreasureItem[]>(
     initialState?.treasures ?? []
@@ -62,7 +63,7 @@ export function PlayerApp({
 
         const nextState = data as StateResponse;
         setState(nextState);
-        setCards(nextState.explorationLogs);
+        setCards(sortExploredRoomCards(nextState.explorationLogs));
         setTreasures(nextState.treasures);
         setRanking(nextState.ranking);
         setTimeUp(isExpired(nextState));
@@ -127,7 +128,7 @@ export function PlayerApp({
       const explored = data as ExploreResponse;
       const exploredCard = explored.card;
       if (exploredCard) {
-        setCards((current) => [...current, exploredCard]);
+        setCards((current) => sortExploredRoomCards([...current, exploredCard]));
       }
       setFeedback(explored.message);
     } catch (caught) {
@@ -182,10 +183,12 @@ export function PlayerApp({
       if (unlockedTreasure) {
         setTreasures((current) => upsertTreasure(current, unlockedTreasure));
         setCards((current) =>
-          current.map((card) =>
-            card.roomCode === unlockedTreasure.roomCode
-              ? { ...card, unlocked: true }
-              : card
+          sortExploredRoomCards(
+            current.map((card) =>
+              card.roomCode === unlockedTreasure.roomCode
+                ? { ...card, unlocked: true }
+                : card
+            )
           )
         );
       }
@@ -205,7 +208,6 @@ export function PlayerApp({
   }
 
   const treasureCount = treasures.length;
-  const latestCard = useMemo(() => cards.at(-1), [cards]);
 
   if (!playerId && !loading) {
     return (
@@ -251,7 +253,7 @@ export function PlayerApp({
       </header>
 
       <section className="puzzle-stage">
-        <PuzzleCarousel cards={cards} latestCard={latestCard} loading={loading} />
+        <PuzzleCarousel cards={cards} loading={loading} />
       </section>
 
       <section className="control-bar">

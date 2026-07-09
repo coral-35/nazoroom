@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { DEFAULT_EVENT_ID } from "@/lib/types/app";
+import { sortExploredRoomCards } from "@/lib/domain/explorationCards";
 import type {
   EventRecord,
   ExplorationLogRecord,
@@ -192,7 +193,7 @@ export function createMemoryRepository(
           .map((treasure) => treasure.roomId)
       );
 
-      return state.explorationLogs
+      const cards = state.explorationLogs
         .filter((log) => log.eventId === eventId && log.playerId === playerId)
         .sort(
           (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -204,6 +205,8 @@ export function createMemoryRepository(
             unlocked: log.roomId ? unlockedRoomIds.has(log.roomId) : false
           })
         );
+
+      return sortExploredRoomCards(cards);
     },
 
     async listPlayerTreasures(eventId, playerId) {

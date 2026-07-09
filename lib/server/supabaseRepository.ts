@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sortExploredRoomCards } from "@/lib/domain/explorationCards";
 import type {
   EventRecord,
   ExplorationLogRecord,
@@ -129,7 +130,7 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
         (treasureData ?? []).map((treasure) => treasure.room_id as string)
       );
 
-      return (logData ?? []).map((row) => {
+      const cards = (logData ?? []).map((row) => {
         const roomRow = normalizeJoinedRow(row.rooms);
         const room = roomRow ? mapRoom(roomRow) : null;
         const log = mapExplorationLog(row);
@@ -140,6 +141,8 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
           unlocked: log.roomId ? unlockedRoomIds.has(log.roomId) : false
         });
       });
+
+      return sortExploredRoomCards(cards);
     },
 
     async listPlayerTreasures(eventId, playerId) {

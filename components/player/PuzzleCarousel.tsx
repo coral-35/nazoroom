@@ -6,19 +6,18 @@ import type { ExploredRoomCard } from "@/lib/types/app";
 
 type PuzzleCarouselProps = {
   cards: ExploredRoomCard[];
-  latestCard?: ExploredRoomCard;
   loading: boolean;
 };
 
-export function PuzzleCarousel({ cards, latestCard, loading }: PuzzleCarouselProps) {
+export function PuzzleCarousel({ cards, loading }: PuzzleCarouselProps) {
   const rowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     rowRef.current?.scrollTo({
-      left: rowRef.current.scrollWidth,
+      left: 0,
       behavior: "smooth"
     });
-  }, [latestCard?.logId]);
+  }, [cards]);
 
   if (loading) {
     return (
@@ -46,18 +45,19 @@ export function PuzzleCarousel({ cards, latestCard, loading }: PuzzleCarouselPro
         <div>
           <p className="kicker">探索ログ</p>
           <h2 className="card-title">見つけた部屋</h2>
+          <p className="muted">未解錠の問題を優先して表示します。</p>
         </div>
         <button
           type="button"
           onClick={() =>
             rowRef.current?.scrollTo({
-              left: rowRef.current.scrollWidth,
+              left: 0,
               behavior: "smooth"
             })
           }
           className="button button--secondary button--compact"
         >
-          最新へ
+          未解錠へ
         </button>
       </div>
       <div ref={rowRef} className="snap-row puzzle-row">
