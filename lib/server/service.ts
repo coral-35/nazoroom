@@ -7,6 +7,8 @@ import { buildExploredRoomCard } from "@/lib/server/repository";
 import { createSupabaseRepository } from "@/lib/server/supabaseRepository";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import type {
+  AdminEventControlResponse,
+  EventControlAction,
   EventRecord,
   ExploreResponse,
   JoinResponse,
@@ -36,6 +38,78 @@ export function createNazoroomService(
   const now = options.now ?? (() => new Date());
 
   return {
+    async getAdminEvent(eventId: string): Promise<AdminEventControlResponse> {
+      const event = await getExistingEvent(repository, eventId);
+      return {
+        event: publicEvent(event, now()),
+        message: adminEventSummary(event, now())
+      };
+    },
+
+    async controlEvent(
+      eventId: string,
+      action: EventControlAction,
+      rawDurationMinutes?: unknown
+    ): Promise<AdminEventControlResponse> {
+      const event = await getExistingEvent(repository, eventId);
+      const controlledAt = now();
+      let nextEvent: EventRecord;
+      let message: string;
+
+      switch (action) {
+        case "start_exploration": {
+          const durationMinutes = parseDurationMinutes(rawDurationMinutes);
+          nextEvent = await repository.updateEvent({
+            eventId,
+            status: "active",
+            startsAt: controlledAt.toISOString(),
+            endsAt: new Date(
+              controlledAt.getTime() + durationMinutes * 60_000
+            ).toISOString()
+          });
+          message = `探索を開始しました。制限時間は${durationMinutes}分です。`;
+          break;
+        }
+        case "close_exploration":
+          nextEvent = await repository.updateEvent({
+            eventId,
+            status: "active",
+            startsAt: event.startsAt ?? controlledAt.toISOString(),
+            endsAt: controlledAt.toISOString()
+          });
+          message = "探索を終了しました。結果発表はまだ公開していません。";
+          break;
+        case "publish_results":
+          nextEvent = await repository.updateEvent({
+            eventId,
+            status: "ended",
+            startsAt: event.startsAt ?? controlledAt.toISOString(),
+            endsAt:
+              event.endsAt && new Date(event.endsAt).getTime() <= controlledAt.getTime()
+                ? event.endsAt
+                : controlledAt.toISOString()
+          });
+          message = "結果を発表しました。ランキングを閲覧できます。";
+          break;
+        case "reset":
+          nextEvent = await repository.resetEventProgress({
+            eventId,
+            status: "draft",
+            startsAt: null,
+            endsAt: null
+          });
+          message = "進行状況をリセットしました。参加者と探索履歴は消去されました。";
+          break;
+        default:
+          throw new AppError("管理操作を選択してください。", 400);
+      }
+
+      return {
+        event: publicEvent(nextEvent, controlledAt),
+        message
+      };
+    },
+
     async joinEvent(eventId: string, rawNickname: unknown): Promise<JoinResponse> {
       const nickname = parseNickname(rawNickname);
       const event = await getExistingEvent(repository, eventId);
@@ -68,7 +142,7 @@ export function createNazoroomService(
       const [explorationLogs, treasures, ranking] = await Promise.all([
         repository.listExplorationCards(eventId, playerId),
         repository.listPlayerTreasures(eventId, playerId),
-        isEventExpired(event, now()) ? calculateEventRanking(repository, eventId) : null
+        event.status === "ended" ? calculateEventRanking(repository, eventId) : null
       ]);
 
       return {
@@ -277,7 +351,11 @@ export function createNazoroomService(
     },
 
     async ranking(eventId: string): Promise<RankingResponse> {
-      await getExistingEvent(repository, eventId);
+      const event = await getExistingEvent(repository, eventId);
+      if (event.status !== "ended") {
+        throw new AppError("結果はまだ発表されていません。", 409);
+      }
+
       return calculateEventRanking(repository, eventId);
     }
   };
@@ -350,4 +428,32 @@ function eventNotActiveMessage(event: EventRecord, at: Date) {
   }
 
   return "イベントはまだ開始されていません。";
+}
+
+function parseDurationMinutes(rawDurationMinutes: unknown) {
+  const value =
+    typeof rawDurationMinutes === "number"
+      ? rawDurationMinutes
+      : typeof rawDurationMinutes === "string"
+        ? Number(rawDurationMinutes)
+        : 60;
+
+  if (!Number.isInteger(value) || value < 1 || value > 1_440) {
+    throw new AppError("制限時間は1分から1440分の範囲で指定してください。", 400);
+  }
+
+  return value;
+}
+
+function adminEventSummary(event: EventRecord, at: Date) {
+  if (event.status === "ended") {
+    return "結果発表中です。";
+  }
+  if (isEventActive(event, at)) {
+    return "探索中です。";
+  }
+  if (isEventExpired(event, at)) {
+    return "探索は終了しています。結果発表はまだ公開していません。";
+  }
+  return "探索開始前です。";
 }

@@ -11,7 +11,8 @@ import type {
 import {
   buildExploredRoomCard,
   type CreateTreasureInput,
-  type NazoroomRepository
+  type NazoroomRepository,
+  type UpdateEventInput
 } from "@/lib/server/repository";
 
 export function createSupabaseRepository(client: SupabaseClient): NazoroomRepository {
@@ -28,6 +29,32 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
       }
 
       return data ? mapEvent(data) : null;
+    },
+
+    async updateEvent(input) {
+      return updateEventRow(client, input);
+    },
+
+    async resetEventProgress(input) {
+      const tables = [
+        "unlock_attempts",
+        "player_treasures",
+        "exploration_logs",
+        "players"
+      ];
+
+      for (const table of tables) {
+        const { error } = await client
+          .from(table)
+          .delete()
+          .eq("event_id", input.eventId);
+
+        if (error) {
+          throw error;
+        }
+      }
+
+      return updateEventRow(client, input);
     },
 
     async upsertPlayer(eventId, nickname) {
@@ -295,6 +322,25 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
       return (data ?? []).map(mapPlayerTreasure);
     }
   };
+}
+
+async function updateEventRow(client: SupabaseClient, input: UpdateEventInput) {
+  const { data, error } = await client
+    .from("events")
+    .update({
+      status: input.status,
+      starts_at: input.startsAt,
+      ends_at: input.endsAt
+    })
+    .eq("id", input.eventId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapEvent(data);
 }
 
 function mapEvent(row: any): EventRecord {

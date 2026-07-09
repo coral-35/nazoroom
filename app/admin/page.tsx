@@ -9,21 +9,21 @@ export default function AdminPage() {
       <section className="panel section-gap">
         <h2 className="card-title">seed データで確認する</h2>
         <p className="lead">
-          MVPでは、Supabase migration と seed SQL でイベント・部屋・解答・宝を登録します。
-          管理画面の本格CRUDは将来拡張扱いです。
+          イベント進行ページを直接開き、探索開始、終了、結果発表、リセットを管理します。
+          部屋・解答・宝の登録は Supabase migration と seed SQL で行います。
         </p>
         <div className="button-grid">
           <Link
-            href={`/events/${DEFAULT_EVENT_ID}/join`}
+            href={`/admin/events/${DEFAULT_EVENT_ID}`}
             className="button button--primary"
           >
-            プレイヤー画面
+            進行管理
           </Link>
           <Link
-            href={`/events/${DEFAULT_EVENT_ID}/results`}
+            href={`/events/${DEFAULT_EVENT_ID}/join`}
             className="button button--secondary"
           >
-            結果画面
+            プレイヤー画面
           </Link>
         </div>
       </section>

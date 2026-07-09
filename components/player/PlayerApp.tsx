@@ -273,11 +273,18 @@ export function PlayerApp({
 
       <section className="dashboard-grid">
         <TreasureList treasures={treasures} />
-        {timeUp || ranking ? (
+        {ranking ? (
           <RankingTable ranking={ranking} />
+        ) : timeUp ? (
+          <div className="panel panel--tight">
+            <h2 className="card-title">結果発表待ち</h2>
+            <p className="lead lead--small">
+              探索時間は終了しました。管理者が結果発表を行うとランキングを確認できます。
+            </p>
+          </div>
         ) : (
           <div className="panel panel--tight muted">
-            ランキングは制限時間終了後に表示されます。
+            ランキングは結果発表後に表示されます。
           </div>
         )}
       </section>

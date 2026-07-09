@@ -59,7 +59,7 @@ describe("unlock service", () => {
 
     expect(result.result).toBe("expired");
     expect(state.treasures).toHaveLength(0);
-    expect(state.ranking).not.toBeNull();
+    expect(state.ranking).toBeNull();
   });
 
   it("calculates ranking from multiple players", async () => {
@@ -70,6 +70,7 @@ describe("unlock service", () => {
     await service.unlock(DEFAULT_EVENT_ID, playerA.player.id, "305", "ひかり");
     await service.unlock(DEFAULT_EVENT_ID, playerA.player.id, "204", "ほし");
     await service.unlock(DEFAULT_EVENT_ID, playerB.player.id, "204", "ほし");
+    await service.controlEvent(DEFAULT_EVENT_ID, "publish_results");
 
     const ranking = await service.ranking(DEFAULT_EVENT_ID);
 

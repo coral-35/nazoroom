@@ -1,6 +1,11 @@
 export const DEFAULT_EVENT_ID = "00000000-0000-0000-0000-000000000001";
 
 export type EventStatus = "draft" | "active" | "ended";
+export type EventControlAction =
+  | "start_exploration"
+  | "close_exploration"
+  | "publish_results"
+  | "reset";
 export type ExploreType = "hidden_clue" | "show_puzzle";
 export type ExploreResultType = "not_found" | ExploreType;
 export type UnlockResult =
@@ -145,6 +150,11 @@ export type StateResponse = {
   explorationLogs: ExploredRoomCard[];
   treasures: TreasureItem[];
   ranking: RankingResponse | null;
+};
+
+export type AdminEventControlResponse = {
+  event: PublicEvent;
+  message: string;
 };
 
 export type ExploreResponse = {

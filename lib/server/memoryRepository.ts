@@ -14,7 +14,8 @@ import type {
 import {
   buildExploredRoomCard,
   type CreateTreasureInput,
-  type NazoroomRepository
+  type NazoroomRepository,
+  type UpdateEventInput
 } from "@/lib/server/repository";
 
 export type MemoryState = {
@@ -127,6 +128,30 @@ export function createMemoryRepository(
     async getEvent(eventId) {
       readLatest();
       return state.events.find((event) => event.id === eventId) ?? null;
+    },
+
+    async updateEvent(input) {
+      readLatest();
+      const event = updateMemoryEvent(input);
+      persist();
+      return event;
+    },
+
+    async resetEventProgress(input) {
+      readLatest();
+      state.players = state.players.filter((player) => player.eventId !== input.eventId);
+      state.explorationLogs = state.explorationLogs.filter(
+        (log) => log.eventId !== input.eventId
+      );
+      state.playerTreasures = state.playerTreasures.filter(
+        (treasure) => treasure.eventId !== input.eventId
+      );
+      state.unlockAttempts = state.unlockAttempts.filter(
+        (attempt) => attempt.eventId !== input.eventId
+      );
+      const event = updateMemoryEvent(input);
+      persist();
+      return event;
     },
 
     async upsertPlayer(eventId, nickname) {
@@ -306,6 +331,24 @@ export function createMemoryRepository(
 
     mkdirSync(dirname(options.persistPath), { recursive: true });
     writeFileSync(options.persistPath, JSON.stringify(state), "utf8");
+  }
+
+  function updateMemoryEvent(input: UpdateEventInput) {
+    const index = state.events.findIndex((event) => event.id === input.eventId);
+    if (index === -1) {
+      throw new Error("Event not found.");
+    }
+
+    const current = state.events[index];
+    const next: EventRecord = {
+      ...current,
+      status: input.status,
+      startsAt: input.startsAt,
+      endsAt: input.endsAt,
+      updatedAt: new Date().toISOString()
+    };
+    state.events[index] = next;
+    return next;
   }
 }
 

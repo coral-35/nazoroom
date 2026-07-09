@@ -38,8 +38,17 @@ export type CreateTreasureInput = {
   room: RoomRecord;
 };
 
+export type UpdateEventInput = {
+  eventId: string;
+  status: EventRecord["status"];
+  startsAt: string | null;
+  endsAt: string | null;
+};
+
 export type NazoroomRepository = {
   getEvent(eventId: string): Promise<EventRecord | null>;
+  updateEvent(input: UpdateEventInput): Promise<EventRecord>;
+  resetEventProgress(input: UpdateEventInput): Promise<EventRecord>;
   upsertPlayer(eventId: string, nickname: string): Promise<PlayerRecord>;
   getPlayer(eventId: string, playerId: string): Promise<PlayerRecord | null>;
   getRoomByNormalizedCode(

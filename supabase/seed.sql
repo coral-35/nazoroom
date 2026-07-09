@@ -2,9 +2,9 @@ insert into public.events (id, title, status, starts_at, ends_at)
 values (
   '00000000-0000-0000-0000-000000000001',
   'MVPテスト宝探し',
-  'active',
-  now() - interval '5 minutes',
-  now() + interval '60 minutes'
+  'draft',
+  null,
+  null
 )
 on conflict (id) do update
 set
