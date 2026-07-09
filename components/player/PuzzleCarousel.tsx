@@ -57,7 +57,7 @@ export function PuzzleCarousel({ cards, loading }: PuzzleCarouselProps) {
           }
           className="button button--secondary button--compact"
         >
-          未解錠へ
+          未クリアへ
         </button>
       </div>
       <div ref={rowRef} className="snap-row puzzle-row">
