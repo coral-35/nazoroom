@@ -4,12 +4,15 @@ import { calculateRanking } from "@/lib/domain/scoring";
 import { AppError } from "@/lib/server/errors";
 import type { NazoroomRepository } from "@/lib/server/repository";
 import { buildExploredRoomCard } from "@/lib/server/repository";
+import type { UpsertRoomInput } from "@/lib/server/repository";
 import { createSupabaseRepository } from "@/lib/server/supabaseRepository";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import type {
   AdminEventControlResponse,
+  AdminRoomsResponse,
   EventControlAction,
   EventRecord,
+  ExploreType,
   ExploreResponse,
   JoinResponse,
   RankingResponse,
@@ -107,6 +110,42 @@ export function createNazoroomService(
       return {
         event: publicEvent(nextEvent, controlledAt),
         message
+      };
+    },
+
+    async listAdminRooms(eventId: string): Promise<AdminRoomsResponse> {
+      await getExistingEvent(repository, eventId);
+
+      return {
+        rooms: await repository.listAdminRooms(eventId)
+      };
+    },
+
+    async saveAdminRoom(
+      eventId: string,
+      rawRoom: unknown
+    ): Promise<AdminRoomsResponse> {
+      await getExistingEvent(repository, eventId);
+      const input = parseAdminRoomInput(rawRoom);
+      const rooms = await repository.listAdminRooms(eventId);
+      const duplicate = rooms.find(
+        (room) =>
+          room.normalizedRoomCode === input.normalizedRoomCode &&
+          room.id !== input.roomId
+      );
+
+      if (duplicate) {
+        throw new AppError("同じ部屋番号の問題がすでに登録されています。", 409);
+      }
+
+      const saved = await repository.upsertRoom({
+        eventId,
+        ...input
+      });
+
+      return {
+        rooms: await repository.listAdminRooms(eventId),
+        message: `部屋 ${saved.roomCode} の問題を保存しました。`
       };
     },
 
@@ -443,6 +482,136 @@ function parseDurationMinutes(rawDurationMinutes: unknown) {
   }
 
   return value;
+}
+
+function parseAdminRoomInput(
+  rawRoom: unknown
+): Omit<UpsertRoomInput, "eventId"> {
+  if (!rawRoom || typeof rawRoom !== "object" || Array.isArray(rawRoom)) {
+    throw new AppError("問題の入力内容を確認してください。", 400);
+  }
+
+  const input = rawRoom as Record<string, unknown>;
+  const roomCode = parseRoomCode(input.roomCode);
+  const exploreType = parseExploreType(input.exploreType);
+
+  return {
+    roomId: parseOptionalText(input.id, 80) ?? undefined,
+    roomCode,
+    normalizedRoomCode: normalizeRoomCode(roomCode),
+    exploreType,
+    title: parseOptionalText(input.title, 120),
+    puzzleText: parseOptionalText(input.puzzleText, 2_000),
+    puzzleImageUrl: parseOptionalText(input.puzzleImageUrl, 500),
+    hiddenMessage: parseOptionalText(input.hiddenMessage, 1_000),
+    treasureName: parseRequiredText(input.treasureName, "宝の名前", 120),
+    treasureDescription: parseOptionalText(input.treasureDescription, 1_000),
+    sortOrder: parseSortOrder(input.sortOrder),
+    isActive: input.isActive !== false,
+    answers: parseAdminAnswers(input.answers)
+  };
+}
+
+function parseExploreType(input: unknown): ExploreType {
+  if (input === "show_puzzle" || input === "hidden_clue") {
+    return input;
+  }
+
+  throw new AppError("表示タイプを選択してください。", 400);
+}
+
+function parseRequiredText(input: unknown, label: string, maxLength: number) {
+  if (typeof input !== "string") {
+    throw new AppError(`${label}を入力してください。`, 400);
+  }
+
+  const value = input.trim();
+  if (!value) {
+    throw new AppError(`${label}を入力してください。`, 400);
+  }
+  if (value.length > maxLength) {
+    throw new AppError(`${label}は${maxLength}文字以内で入力してください。`, 400);
+  }
+
+  return value;
+}
+
+function parseOptionalText(input: unknown, maxLength: number) {
+  if (input === null || input === undefined) {
+    return null;
+  }
+  if (typeof input !== "string") {
+    throw new AppError("入力内容を確認してください。", 400);
+  }
+
+  const value = input.trim();
+  if (!value) {
+    return null;
+  }
+  if (value.length > maxLength) {
+    throw new AppError(`${maxLength}文字以内で入力してください。`, 400);
+  }
+
+  return value;
+}
+
+function parseSortOrder(input: unknown) {
+  const value =
+    typeof input === "number"
+      ? input
+      : typeof input === "string"
+        ? Number(input)
+        : 0;
+
+  if (!Number.isInteger(value) || value < 0 || value > 9_999) {
+    throw new AppError("表示順は0から9999の整数で入力してください。", 400);
+  }
+
+  return value;
+}
+
+function parseAdminAnswers(input: unknown) {
+  const rawAnswers =
+    typeof input === "string"
+      ? input.split(/\r?\n/)
+      : Array.isArray(input)
+        ? input
+        : [];
+  const answers: UpsertRoomInput["answers"] = [];
+  const seen = new Set<string>();
+
+  for (const rawAnswer of rawAnswers) {
+    if (typeof rawAnswer !== "string") {
+      throw new AppError("解答の入力内容を確認してください。", 400);
+    }
+
+    const answerText = rawAnswer.trim();
+    if (!answerText) {
+      continue;
+    }
+    if (answerText.length > 120) {
+      throw new AppError("解答は120文字以内で入力してください。", 400);
+    }
+
+    const normalizedAnswer = normalizeAnswer(answerText);
+    if (seen.has(normalizedAnswer)) {
+      continue;
+    }
+    seen.add(normalizedAnswer);
+    answers.push({
+      answerText,
+      normalizedAnswer
+    });
+  }
+
+  if (answers.length === 0) {
+    throw new AppError("解答を1つ以上入力してください。", 400);
+  }
+  if (answers.length > 20) {
+    throw new AppError("解答は20個以内で入力してください。", 400);
+  }
+
+  return answers;
 }
 
 function adminEventSummary(event: EventRecord, at: Date) {

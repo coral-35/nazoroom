@@ -10,6 +10,7 @@ import type {
   UnlockResult,
   EventRecord
 } from "@/lib/types/app";
+import type { AdminRoomRecord, ExploreType } from "@/lib/types/app";
 
 export type CreateExplorationLogInput = {
   eventId: string;
@@ -45,6 +46,26 @@ export type UpdateEventInput = {
   endsAt: string | null;
 };
 
+export type UpsertRoomInput = {
+  eventId: string;
+  roomId?: string;
+  roomCode: string;
+  normalizedRoomCode: string;
+  exploreType: ExploreType;
+  title: string | null;
+  puzzleText: string | null;
+  puzzleImageUrl: string | null;
+  hiddenMessage: string | null;
+  treasureName: string;
+  treasureDescription: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  answers: {
+    answerText: string;
+    normalizedAnswer: string;
+  }[];
+};
+
 export type NazoroomRepository = {
   getEvent(eventId: string): Promise<EventRecord | null>;
   updateEvent(input: UpdateEventInput): Promise<EventRecord>;
@@ -70,6 +91,8 @@ export type NazoroomRepository = {
   ): Promise<{ treasure: PlayerTreasureRecord; created: boolean }>;
   listPlayers(eventId: string): Promise<PlayerRecord[]>;
   listRooms(eventId: string): Promise<RoomRecord[]>;
+  listAdminRooms(eventId: string): Promise<AdminRoomRecord[]>;
+  upsertRoom(input: UpsertRoomInput): Promise<AdminRoomRecord>;
   listAllTreasures(eventId: string): Promise<PlayerTreasureRecord[]>;
 };
 

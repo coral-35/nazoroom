@@ -42,7 +42,9 @@ a {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -285,6 +287,43 @@ img {
   padding: 10px 12px;
   color: var(--foreground);
   font-size: 1rem;
+}
+
+.input--textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.checkbox-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.admin-room-list {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.admin-room-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft);
+  padding: 16px;
+}
+
+.admin-room-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.field--full {
+  grid-column: 1 / -1;
 }
 
 .message {
@@ -568,6 +607,7 @@ img {
 
   .button-grid,
   .admin-status-grid,
+  .admin-room-fields,
   .dashboard-grid {
     grid-template-columns: 1fr;
   }

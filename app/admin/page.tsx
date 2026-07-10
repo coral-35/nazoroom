@@ -1,10 +1,15 @@
 import Link from "next/link";
 import { AdminEventControl } from "@/components/admin/AdminEventControl";
+import { AdminRoomEditor } from "@/components/admin/AdminRoomEditor";
 import { getNazoroomService } from "@/lib/server/service";
 import { DEFAULT_EVENT_ID } from "@/lib/types/app";
 
 export default async function AdminPage() {
-  const adminState = await getNazoroomService().getAdminEvent(DEFAULT_EVENT_ID);
+  const service = getNazoroomService();
+  const [adminState, adminRooms] = await Promise.all([
+    service.getAdminEvent(DEFAULT_EVENT_ID),
+    service.listAdminRooms(DEFAULT_EVENT_ID)
+  ]);
 
   return (
     <main className="page-shell page-shell--wide">
@@ -36,6 +41,11 @@ export default async function AdminPage() {
           initialMessage={adminState.message}
         />
       </section>
+      <AdminRoomEditor
+        eventId={DEFAULT_EVENT_ID}
+        apiBasePath="/api/admin/event"
+        initialRooms={adminRooms.rooms}
+      />
     </main>
   );
 }

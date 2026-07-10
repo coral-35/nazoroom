@@ -5,6 +5,7 @@ import type {
   ExplorationLogRecord,
   PlayerRecord,
   PlayerTreasureRecord,
+  RoomAnswerRecord,
   RoomRecord,
   UnlockAttemptRecord
 } from "@/lib/types/app";
@@ -12,7 +13,8 @@ import {
   buildExploredRoomCard,
   type CreateTreasureInput,
   type NazoroomRepository,
-  type UpdateEventInput
+  type UpdateEventInput,
+  type UpsertRoomInput
 } from "@/lib/server/repository";
 
 export function createSupabaseRepository(client: SupabaseClient): NazoroomRepository {
@@ -308,6 +310,25 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
       return (data ?? []).map(mapRoom);
     },
 
+    async listAdminRooms(eventId) {
+      const { data, error } = await client
+        .from("rooms")
+        .select("*, room_answers(*)")
+        .eq("event_id", eventId)
+        .order("sort_order", { ascending: true })
+        .order("room_code", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      return (data ?? []).map(mapAdminRoom);
+    },
+
+    async upsertRoom(input) {
+      return upsertRoomRow(client, input);
+    },
+
     async listAllTreasures(eventId) {
       const { data, error } = await client
         .from("player_treasures")
@@ -341,6 +362,77 @@ async function updateEventRow(client: SupabaseClient, input: UpdateEventInput) {
   }
 
   return mapEvent(data);
+}
+
+async function upsertRoomRow(client: SupabaseClient, input: UpsertRoomInput) {
+  const payload = {
+    event_id: input.eventId,
+    room_code: input.roomCode,
+    normalized_room_code: input.normalizedRoomCode,
+    explore_type: input.exploreType,
+    title: input.title,
+    puzzle_text: input.puzzleText,
+    puzzle_image_url: input.puzzleImageUrl,
+    hidden_message: input.hiddenMessage,
+    treasure_name: input.treasureName,
+    treasure_description: input.treasureDescription,
+    sort_order: input.sortOrder,
+    is_active: input.isActive
+  };
+
+  const query = input.roomId
+    ? client
+        .from("rooms")
+        .update(payload)
+        .eq("id", input.roomId)
+        .eq("event_id", input.eventId)
+    : client.from("rooms").insert(payload);
+
+  const { data: roomData, error: roomError } = await query.select("*").single();
+
+  if (roomError) {
+    throw roomError;
+  }
+
+  const room = mapRoom(roomData);
+  const { error: deleteError } = await client
+    .from("room_answers")
+    .delete()
+    .eq("room_id", room.id);
+
+  if (deleteError) {
+    throw deleteError;
+  }
+
+  if (input.answers.length > 0) {
+    const { error: insertError } = await client.from("room_answers").insert(
+      input.answers.map((answer) => ({
+        room_id: room.id,
+        answer_text: answer.answerText,
+        normalized_answer: answer.normalizedAnswer
+      }))
+    );
+
+    if (insertError) {
+      throw insertError;
+    }
+  }
+
+  return getAdminRoomById(client, room.id);
+}
+
+async function getAdminRoomById(client: SupabaseClient, roomId: string) {
+  const { data, error } = await client
+    .from("rooms")
+    .select("*, room_answers(*)")
+    .eq("id", roomId)
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapAdminRoom(data);
 }
 
 function mapEvent(row: any): EventRecord {
@@ -381,6 +473,26 @@ function mapRoom(row: any): RoomRecord {
     isActive: row.is_active,
     createdAt: row.created_at,
     updatedAt: row.updated_at
+  };
+}
+
+function mapAdminRoom(row: any) {
+  const room = mapRoom(row);
+  const answers = normalizeJoinedRows(row.room_answers).map(mapRoomAnswer);
+
+  return {
+    ...room,
+    answers: answers.sort((a, b) => a.answerText.localeCompare(b.answerText))
+  };
+}
+
+function mapRoomAnswer(row: any): RoomAnswerRecord {
+  return {
+    id: row.id,
+    roomId: row.room_id,
+    answerText: row.answer_text,
+    normalizedAnswer: row.normalized_answer,
+    createdAt: row.created_at
   };
 }
 
@@ -435,4 +547,11 @@ function normalizeJoinedRow(row: any): any | null {
     return row[0] ?? null;
   }
   return row;
+}
+
+function normalizeJoinedRows(row: any): any[] {
+  if (!row) {
+    return [];
+  }
+  return Array.isArray(row) ? row : [row];
 }

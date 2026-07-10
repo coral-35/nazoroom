@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminEventControl } from "@/components/admin/AdminEventControl";
+import { AdminRoomEditor } from "@/components/admin/AdminRoomEditor";
 import { getNazoroomService } from "@/lib/server/service";
 
 type AdminEventPageProps = {
@@ -10,7 +11,11 @@ type AdminEventPageProps = {
 
 export default async function AdminEventPage({ params }: AdminEventPageProps) {
   const { eventId } = await params;
-  const adminState = await getNazoroomService().getAdminEvent(eventId);
+  const service = getNazoroomService();
+  const [adminState, adminRooms] = await Promise.all([
+    service.getAdminEvent(eventId),
+    service.listAdminRooms(eventId)
+  ]);
 
   return (
     <main className="page-shell page-shell--wide">
@@ -32,6 +37,7 @@ export default async function AdminEventPage({ params }: AdminEventPageProps) {
         initialEvent={adminState.event}
         initialMessage={adminState.message}
       />
+      <AdminRoomEditor eventId={eventId} initialRooms={adminRooms.rooms} />
     </main>
   );
 }

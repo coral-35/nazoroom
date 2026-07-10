@@ -58,6 +58,10 @@ export type RoomAnswerRecord = {
   createdAt: string;
 };
 
+export type AdminRoomRecord = RoomRecord & {
+  answers: RoomAnswerRecord[];
+};
+
 export type ExplorationLogRecord = {
   id: string;
   eventId: string;
@@ -155,6 +159,11 @@ export type StateResponse = {
 export type AdminEventControlResponse = {
   event: PublicEvent;
   message: string;
+};
+
+export type AdminRoomsResponse = {
+  rooms: AdminRoomRecord[];
+  message?: string;
 };
 
 export type ExploreResponse = {

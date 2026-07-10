@@ -15,7 +15,8 @@ import {
   buildExploredRoomCard,
   type CreateTreasureInput,
   type NazoroomRepository,
-  type UpdateEventInput
+  type UpdateEventInput,
+  type UpsertRoomInput
 } from "@/lib/server/repository";
 
 export type MemoryState = {
@@ -309,6 +310,30 @@ export function createMemoryRepository(
         .sort((a, b) => a.sortOrder - b.sortOrder);
     },
 
+    async listAdminRooms(eventId) {
+      readLatest();
+      return buildAdminRooms(eventId);
+    },
+
+    async upsertRoom(input) {
+      readLatest();
+      const room = upsertMemoryRoom(input);
+      state.roomAnswers = state.roomAnswers.filter(
+        (answer) => answer.roomId !== room.id
+      );
+      state.roomAnswers.push(
+        ...input.answers.map((answer) => ({
+          id: crypto.randomUUID(),
+          roomId: room.id,
+          answerText: answer.answerText,
+          normalizedAnswer: answer.normalizedAnswer,
+          createdAt: new Date().toISOString()
+        }))
+      );
+      persist();
+      return buildAdminRoom(room);
+    },
+
     async listAllTreasures(eventId) {
       readLatest();
       return state.playerTreasures
@@ -349,6 +374,72 @@ export function createMemoryRepository(
     };
     state.events[index] = next;
     return next;
+  }
+
+  function upsertMemoryRoom(input: UpsertRoomInput) {
+    const now = new Date().toISOString();
+    const existingIndex = input.roomId
+      ? state.rooms.findIndex(
+          (room) => room.id === input.roomId && room.eventId === input.eventId
+        )
+      : -1;
+
+    if (existingIndex >= 0) {
+      const current = state.rooms[existingIndex];
+      const next: RoomRecord = {
+        ...current,
+        roomCode: input.roomCode,
+        normalizedRoomCode: input.normalizedRoomCode,
+        exploreType: input.exploreType,
+        title: input.title,
+        puzzleText: input.puzzleText,
+        puzzleImageUrl: input.puzzleImageUrl,
+        hiddenMessage: input.hiddenMessage,
+        treasureName: input.treasureName,
+        treasureDescription: input.treasureDescription,
+        sortOrder: input.sortOrder,
+        isActive: input.isActive,
+        updatedAt: now
+      };
+      state.rooms[existingIndex] = next;
+      return next;
+    }
+
+    const room: RoomRecord = {
+      id: crypto.randomUUID(),
+      eventId: input.eventId,
+      roomCode: input.roomCode,
+      normalizedRoomCode: input.normalizedRoomCode,
+      exploreType: input.exploreType,
+      title: input.title,
+      puzzleText: input.puzzleText,
+      puzzleImageUrl: input.puzzleImageUrl,
+      hiddenMessage: input.hiddenMessage,
+      treasureName: input.treasureName,
+      treasureDescription: input.treasureDescription,
+      sortOrder: input.sortOrder,
+      isActive: input.isActive,
+      createdAt: now,
+      updatedAt: now
+    };
+    state.rooms.push(room);
+    return room;
+  }
+
+  function buildAdminRooms(eventId: string) {
+    return state.rooms
+      .filter((room) => room.eventId === eventId)
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.roomCode.localeCompare(b.roomCode))
+      .map(buildAdminRoom);
+  }
+
+  function buildAdminRoom(room: RoomRecord) {
+    return {
+      ...room,
+      answers: state.roomAnswers
+        .filter((answer) => answer.roomId === room.id)
+        .sort((a, b) => a.answerText.localeCompare(b.answerText))
+    };
   }
 }
 
