@@ -12,6 +12,11 @@ type CountdownTimerProps = {
 export function CountdownTimer({ status, endsAt, onExpire }: CountdownTimerProps) {
   const [remainingMs, setRemainingMs] = useState<number | null>(null);
   const expiredOnce = useRef(false);
+  const onExpireRef = useRef(onExpire);
+
+  useEffect(() => {
+    onExpireRef.current = onExpire;
+  }, [onExpire]);
 
   useEffect(() => {
     expiredOnce.current = false;
@@ -27,7 +32,7 @@ export function CountdownTimer({ status, endsAt, onExpire }: CountdownTimerProps
 
       if (nextRemaining <= 0 && !expiredOnce.current) {
         expiredOnce.current = true;
-        onExpire();
+        onExpireRef.current();
       }
     };
 
@@ -35,7 +40,7 @@ export function CountdownTimer({ status, endsAt, onExpire }: CountdownTimerProps
     const intervalId = window.setInterval(tick, 1_000);
 
     return () => window.clearInterval(intervalId);
-  }, [endsAt, onExpire, status]);
+  }, [endsAt, status]);
 
   if (!endsAt) {
     return (
