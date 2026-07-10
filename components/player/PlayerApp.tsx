@@ -19,14 +19,18 @@ import type {
 
 type PlayerAppProps = {
   eventId: string;
+  apiBasePath?: string;
   initialPlayerId?: string | null;
   initialState?: StateResponse | null;
+  joinPath?: string;
 };
 
 export function PlayerApp({
   eventId,
+  apiBasePath = `/api/events/${eventId}`,
   initialPlayerId = null,
-  initialState = null
+  initialState = null,
+  joinPath = `/events/${eventId}/join`
 }: PlayerAppProps) {
   const [playerId, setPlayerId] = useState<string | null>(initialPlayerId);
   const [state, setState] = useState<StateResponse | null>(initialState);
@@ -53,7 +57,7 @@ export function PlayerApp({
       setFeedback(null);
       try {
         const response = await fetch(
-          `/api/events/${eventId}/state?playerId=${encodeURIComponent(id)}`
+          `${apiBasePath}/state?playerId=${encodeURIComponent(id)}`
         );
         const data = (await response.json()) as StateResponse | { message?: string };
 
@@ -77,7 +81,7 @@ export function PlayerApp({
         setLoading(false);
       }
     },
-    [eventId]
+    [apiBasePath]
   );
 
   useEffect(() => {
@@ -112,7 +116,7 @@ export function PlayerApp({
     setExploreBusy(true);
     setFeedback(null);
     try {
-      const response = await fetch(`/api/events/${eventId}/explore`, {
+      const response = await fetch(`${apiBasePath}/explore`, {
         method: "POST",
         headers: {
           "content-type": "application/json"
@@ -159,7 +163,7 @@ export function PlayerApp({
     setUnlockBusy(true);
     setFeedback(null);
     try {
-      const response = await fetch(`/api/events/${eventId}/unlock`, {
+      const response = await fetch(`${apiBasePath}/unlock`, {
         method: "POST",
         headers: {
           "content-type": "application/json"
@@ -218,7 +222,7 @@ export function PlayerApp({
             先にニックネームを登録してから探索を開始してください。
           </p>
           <Link
-            href={`/events/${eventId}/join`}
+            href={joinPath}
             className="button button--primary"
           >
             参加画面へ

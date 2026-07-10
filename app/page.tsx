@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { DEFAULT_EVENT_ID } from "@/lib/types/app";
 
 export default function HomePage() {
   return (
@@ -11,16 +10,10 @@ export default function HomePage() {
           部屋番号を探索し、見つけた謎を解いて宝を集めるプレイヤー用アプリです。
         </p>
         <div className="action-stack">
-          <Link
-            href={`/events/${DEFAULT_EVENT_ID}/join`}
-            className="button button--primary"
-          >
+          <Link href="/join" className="button button--primary">
             テストイベントに参加
           </Link>
-          <Link
-            href={`/events/${DEFAULT_EVENT_ID}/results`}
-            className="button button--secondary"
-          >
+          <Link href="/results" className="button button--secondary">
             ランキングを見る
           </Link>
         </div>

@@ -9,12 +9,14 @@ import type {
 
 type AdminEventControlProps = {
   eventId: string;
+  apiBasePath?: string;
   initialEvent: PublicEvent;
   initialMessage: string;
 };
 
 export function AdminEventControl({
   eventId,
+  apiBasePath = `/api/admin/events/${eventId}`,
   initialEvent,
   initialMessage
 }: AdminEventControlProps) {
@@ -29,7 +31,7 @@ export function AdminEventControl({
     setError(null);
 
     try {
-      const response = await fetch(`/api/admin/events/${eventId}/control`, {
+      const response = await fetch(`${apiBasePath}/control`, {
         method: "POST",
         headers: {
           "content-type": "application/json"

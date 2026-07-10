@@ -6,9 +6,15 @@ import type { JoinResponse } from "@/lib/types/app";
 
 type JoinFormProps = {
   eventId: string;
+  apiBasePath?: string;
+  playPath?: string;
 };
 
-export function JoinForm({ eventId }: JoinFormProps) {
+export function JoinForm({
+  eventId,
+  apiBasePath = `/api/events/${eventId}`,
+  playPath = `/events/${eventId}/play`
+}: JoinFormProps) {
   const router = useRouter();
   const [nickname, setNickname] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +36,7 @@ export function JoinForm({ eventId }: JoinFormProps) {
 
     setBusy(true);
     try {
-      const response = await fetch(`/api/events/${eventId}/join`, {
+      const response = await fetch(`${apiBasePath}/join`, {
         method: "POST",
         headers: {
           "content-type": "application/json"
@@ -45,7 +51,7 @@ export function JoinForm({ eventId }: JoinFormProps) {
 
       const joined = data as JoinResponse;
       localStorage.setItem(`nazoroom.player.${eventId}`, joined.player.id);
-      router.push(`/events/${eventId}/play?playerId=${joined.player.id}`);
+      router.push(`${playPath}?playerId=${joined.player.id}`);
     } catch (caught) {
       setError(
         caught instanceof Error

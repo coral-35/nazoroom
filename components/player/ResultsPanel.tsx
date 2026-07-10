@@ -6,16 +6,20 @@ import type { RankingResponse } from "@/lib/types/app";
 
 type ResultsPanelProps = {
   eventId: string;
+  apiBasePath?: string;
 };
 
-export function ResultsPanel({ eventId }: ResultsPanelProps) {
+export function ResultsPanel({
+  eventId,
+  apiBasePath = `/api/events/${eventId}`
+}: ResultsPanelProps) {
   const [ranking, setRanking] = useState<RankingResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadRanking() {
       try {
-        const response = await fetch(`/api/events/${eventId}/ranking`);
+        const response = await fetch(`${apiBasePath}/ranking`);
         const data = (await response.json()) as RankingResponse | { message?: string };
 
         if (!response.ok) {
@@ -33,7 +37,7 @@ export function ResultsPanel({ eventId }: ResultsPanelProps) {
     }
 
     void loadRanking();
-  }, [eventId]);
+  }, [apiBasePath]);
 
   if (error) {
     return (
