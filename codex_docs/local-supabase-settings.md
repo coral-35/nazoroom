@@ -10,8 +10,8 @@ NazoRoom は NazoApp と同時起動できる2つ目の Next.js + Supabase ア�
 - Next.js dev server: `http://localhost:3001`
 - Supabase API: `http://127.0.0.1:55321`
 - Supabase Studio: `http://127.0.0.1:55323`
-- `.env.local`: ローカルSupabase用
-- `.env.remote.local`: リモートSupabase用の退避ファイル
+- `room/.env.local`: ローカルSupabase用
+- `room/.env.remote.local`: リモートSupabase用の退避ファイル
 
 本番で Supabase を使用する前提のため、アプリ実行時は Supabase 接続を必須にする。テストでは `createNazoroomService` にテスト用Repositoryを注入する。
 
@@ -38,7 +38,7 @@ npx supabase db reset
 npm run dev
 ```
 
-`npx supabase status` で表示される `anon key` と `service_role key` を `.env.local` に反映する。
+`npx supabase status` で表示される `anon key` と `service_role key` を `room/.env.local` に反映する。
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:55321

@@ -14,7 +14,7 @@ export function createSupabaseAdminClient(): SupabaseClient {
 
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error(
-      "Supabase server config is missing. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
+      "Supabase server config is missing. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in room/.env.local."
     );
   }
 

@@ -27,7 +27,7 @@ NazoRoom は2つ目のアプリとして、`../nazoapp` と同時起動できる
 | Shadow DB | 55320 | local migration/diff用 |
 | Next.js | 3001 | `http://localhost:3001` |
 
-`.env.local` はローカルSupabase用、`.env.remote.local` はリモートSupabase用の退避ファイルとして使います。
+`room/.env.local` はローカルSupabase用、`room/.env.remote.local` はリモートSupabase用の退避ファイルとして使います。
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:55321
@@ -50,7 +50,7 @@ npm run dev
 
 アプリは `http://localhost:3001`、Supabase Studio は `http://127.0.0.1:55323` で開きます。
 
-`npx supabase status` の `anon key` と `service_role key` を `.env.local` に反映してから `npm run dev` を起動してください。
+`npx supabase status` の `anon key` と `service_role key` を `room/.env.local` に反映してから `npm run dev` を起動してください。
 
 開発用のテストイベントは固定の1件です。通常操作ではイベントIDを入力せず、短いURLを使います。
 
