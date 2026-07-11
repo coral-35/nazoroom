@@ -202,6 +202,47 @@ img {
   gap: 12px;
 }
 
+.admin-header-actions,
+.admin-dashboard-summary {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-dashboard {
+  padding: 16px;
+}
+
+.admin-dashboard-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-metric-value {
+  margin: 2px 0 0;
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.admin-player-list {
+  display: grid;
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.admin-player-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 2px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.admin-empty {
+  margin: 12px 0 0;
+}
+
 .status-item {
   min-width: 0;
   border-radius: 8px;
@@ -365,6 +406,30 @@ img {
   font-size: 1.15rem;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
+}
+
+.waiting-panel {
+  overflow: hidden;
+  text-align: center;
+}
+
+.waiting-pulse {
+  width: 18px;
+  height: 18px;
+  margin: 28px auto 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 0 rgb(0 138 114 / 0.35);
+  animation: waiting-pulse 1.6s infinite;
+}
+
+@keyframes waiting-pulse {
+  70% {
+    box-shadow: 0 0 0 20px rgb(0 138 114 / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(0 138 114 / 0);
+  }
 }
 
 .puzzle-stage {

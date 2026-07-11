@@ -9,6 +9,7 @@ import { createSupabaseRepository } from "@/lib/server/supabaseRepository";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import type {
   AdminEventControlResponse,
+  AdminDashboardResponse,
   AdminRoomsResponse,
   EventControlAction,
   EventRecord,
@@ -49,6 +50,21 @@ export function createNazoroomService(
       };
     },
 
+    async getAdminDashboard(eventId: string): Promise<AdminDashboardResponse> {
+      const event = await getExistingEvent(repository, eventId);
+      const ranking = await calculateEventRanking(repository, eventId);
+
+      return {
+        event: publicEvent(event, now()),
+        totalPlayers: ranking.totalPlayers,
+        totalUnlocks: ranking.ranking.reduce(
+          (total, player) => total + player.treasureCount,
+          0
+        ),
+        players: ranking.ranking
+      };
+    },
+
     async controlEvent(
       eventId: string,
       action: EventControlAction,
@@ -66,9 +82,8 @@ export function createNazoroomService(
             eventId,
             status: "active",
             startsAt: controlledAt.toISOString(),
-            endsAt: new Date(
-              controlledAt.getTime() + durationMinutes * 60_000
-            ).toISOString()
+            endsAt: null,
+            durationMinutes
           });
           message = `探索を開始しました。制限時間は${durationMinutes}分です。`;
           break;
@@ -78,7 +93,8 @@ export function createNazoroomService(
             eventId,
             status: "active",
             startsAt: event.startsAt ?? controlledAt.toISOString(),
-            endsAt: controlledAt.toISOString()
+            endsAt: controlledAt.toISOString(),
+            durationMinutes: event.durationMinutes
           });
           message = "探索を終了しました。結果発表はまだ公開していません。";
           break;
@@ -90,7 +106,8 @@ export function createNazoroomService(
             endsAt:
               event.endsAt && new Date(event.endsAt).getTime() <= controlledAt.getTime()
                 ? event.endsAt
-                : controlledAt.toISOString()
+                : controlledAt.toISOString(),
+            durationMinutes: event.durationMinutes
           });
           message = "結果を発表しました。ランキングを閲覧できます。";
           break;
@@ -99,7 +116,8 @@ export function createNazoroomService(
             eventId,
             status: "draft",
             startsAt: null,
-            endsAt: null
+            endsAt: null,
+            durationMinutes: event.durationMinutes
           });
           message = "進行状況をリセットしました。参加者と探索履歴は消去されました。";
           break;
@@ -153,8 +171,8 @@ export function createNazoroomService(
       const nickname = parseNickname(rawNickname);
       const event = await getExistingEvent(repository, eventId);
 
-      if (!isEventActive(event, now())) {
-        throw new AppError(eventNotActiveMessage(event, now()), 409);
+      if (event.status === "ended" || isEventExpired(event, now())) {
+        throw new AppError("参加受付は終了しています。", 409);
       }
 
       const player = await repository.upsertPlayer(eventId, nickname);

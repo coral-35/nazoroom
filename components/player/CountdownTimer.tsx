@@ -5,11 +5,11 @@ import type { EventStatus } from "@/lib/types/app";
 
 type CountdownTimerProps = {
   status?: EventStatus;
-  endsAt: string | null;
+  deadlineAt: number | null;
   onExpire: () => void;
 };
 
-export function CountdownTimer({ status, endsAt, onExpire }: CountdownTimerProps) {
+export function CountdownTimer({ status, deadlineAt, onExpire }: CountdownTimerProps) {
   const [remainingMs, setRemainingMs] = useState<number | null>(null);
   const expiredOnce = useRef(false);
   const onExpireRef = useRef(onExpire);
@@ -21,13 +21,13 @@ export function CountdownTimer({ status, endsAt, onExpire }: CountdownTimerProps
   useEffect(() => {
     expiredOnce.current = false;
 
-    if (!endsAt || status === "ended") {
+    if (!deadlineAt || status === "ended") {
       setRemainingMs(null);
       return;
     }
 
     const tick = () => {
-      const nextRemaining = calculateRemaining(endsAt);
+      const nextRemaining = calculateRemaining(deadlineAt);
       setRemainingMs(nextRemaining);
 
       if (nextRemaining <= 0 && !expiredOnce.current) {
@@ -40,9 +40,9 @@ export function CountdownTimer({ status, endsAt, onExpire }: CountdownTimerProps
     const intervalId = window.setInterval(tick, 1_000);
 
     return () => window.clearInterval(intervalId);
-  }, [endsAt, status]);
+  }, [deadlineAt, status]);
 
-  if (!endsAt) {
+  if (!deadlineAt) {
     return (
       <div className="timer-box">
         <p className="timer-label">残り時間</p>
@@ -63,12 +63,12 @@ export function CountdownTimer({ status, endsAt, onExpire }: CountdownTimerProps
   );
 }
 
-function calculateRemaining(endsAt: string | null) {
-  if (!endsAt) {
+function calculateRemaining(deadlineAt: number | null) {
+  if (!deadlineAt) {
     return Number.POSITIVE_INFINITY;
   }
 
-  return Math.max(0, new Date(endsAt).getTime() - Date.now());
+  return Math.max(0, deadlineAt - Date.now());
 }
 
 function formatRemaining(ms: number) {

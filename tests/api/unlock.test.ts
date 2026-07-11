@@ -41,13 +41,12 @@ describe("unlock service", () => {
     expect(state.treasures).toHaveLength(1);
   });
 
-  it("records expired unlock attempts without granting treasure", async () => {
+  it("records attempts after the administrator closes exploration", async () => {
     const repository = createMemoryRepository(createSeedMemoryState(activeNow));
     const activeService = createNazoroomService(repository, { now: () => activeNow });
     const joined = await activeService.joinEvent(DEFAULT_EVENT_ID, "テスト太郎");
-    const expiredService = createNazoroomService(repository, {
-      now: () => new Date("2026-07-09T11:10:00.000Z")
-    });
+    const expiredService = createNazoroomService(repository, { now: () => activeNow });
+    await expiredService.controlEvent(DEFAULT_EVENT_ID, "close_exploration");
 
     const result = await expiredService.unlock(
       DEFAULT_EVENT_ID,

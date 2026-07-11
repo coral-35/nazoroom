@@ -8,6 +8,7 @@ import { PuzzleCarousel } from "@/components/player/PuzzleCarousel";
 import { RankingTable } from "@/components/player/RankingTable";
 import { TreasureList } from "@/components/player/TreasureList";
 import { sortExploredRoomCards } from "@/lib/domain/explorationCards";
+import { calculateLocalDeadline, parseLocalStart } from "@/lib/domain/localTimer";
 import type {
   ExploredRoomCard,
   ExploreResponse,
@@ -49,12 +50,15 @@ export function PlayerApp({
   const [loading, setLoading] = useState(!initialState);
   const [exploreBusy, setExploreBusy] = useState(false);
   const [unlockBusy, setUnlockBusy] = useState(false);
-  const [timeUp, setTimeUp] = useState(initialState ? isExpired(initialState) : false);
+  const [localStartAt, setLocalStartAt] = useState<number | null>(null);
+  const [timeUp, setTimeUp] = useState(false);
 
   const loadState = useCallback(
-    async (id: string) => {
-      setLoading(true);
-      setFeedback(null);
+    async (id: string, silent = false) => {
+      if (!silent) {
+        setLoading(true);
+        setFeedback(null);
+      }
       try {
         const response = await fetch(
           `${apiBasePath}/state?playerId=${encodeURIComponent(id)}`
@@ -70,7 +74,9 @@ export function PlayerApp({
         setCards(sortExploredRoomCards(nextState.explorationLogs));
         setTreasures(nextState.treasures);
         setRanking(nextState.ranking);
-        setTimeUp(isExpired(nextState));
+        if (nextState.event.status === "ended" || nextState.event.endsAt) {
+          setTimeUp(true);
+        }
       } catch (caught) {
         setFeedback(
           caught instanceof Error
@@ -78,7 +84,9 @@ export function PlayerApp({
             : "通信に失敗しました。時間をおいて再試行してください。"
         );
       } finally {
-        setLoading(false);
+        if (!silent) {
+          setLoading(false);
+        }
       }
     },
     [apiBasePath]
@@ -104,8 +112,55 @@ export function PlayerApp({
     void loadState(id);
   }, [eventId, initialPlayerId, initialState, loadState]);
 
-  const disabled = loading || timeUp || !state;
+  useEffect(() => {
+    if (!playerId || !state) {
+      return;
+    }
+
+    if (state.event.status !== "active" || !state.event.startsAt) {
+      if (state.event.status === "ended" || state.event.endsAt) {
+        setTimeUp(true);
+      }
+      return;
+    }
+
+    const storageKey = `nazoroom.start.${eventId}.${playerId}`;
+    const stored = parseLocalStart(localStorage.getItem(storageKey));
+    const receivedAt =
+      stored?.signal === state.event.startsAt ? stored.receivedAt : Date.now();
+
+    if (!stored || stored.signal !== state.event.startsAt) {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({ signal: state.event.startsAt, receivedAt })
+      );
+    }
+
+    setLocalStartAt(receivedAt);
+    setTimeUp(
+      Date.now() >= calculateLocalDeadline(receivedAt, state.event.durationMinutes)
+    );
+  }, [eventId, playerId, state]);
+
+  useEffect(() => {
+    if (!playerId || state?.event.status === "ended") {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void loadState(playerId, true);
+    }, 2_000);
+
+    return () => window.clearInterval(intervalId);
+  }, [loadState, playerId, state?.event.status]);
+
+  const waiting = state?.event.status === "draft";
+  const disabled = loading || timeUp || !state || waiting || !localStartAt;
   const eventTitle = state?.event.title ?? "宝探しイベント";
+  const deadlineAt =
+    localStartAt && state
+      ? calculateLocalDeadline(localStartAt, state.event.durationMinutes)
+      : null;
 
   async function handleExplore() {
     if (!playerId || !roomCode.trim()) {
@@ -232,6 +287,22 @@ export function PlayerApp({
     );
   }
 
+  if (playerId && state?.event.status === "draft") {
+    return (
+      <main className="page-shell page-shell--center">
+        <section className="panel waiting-panel">
+          <p className="kicker">参加済み</p>
+          <h1 className="section-title">開始を待っています</h1>
+          <p className="lead">
+            {state.player.nickname} さんの参加を受け付けました。管理者の開始合図を受信すると、この端末で{state.event.durationMinutes}分の計測を始めます。
+          </p>
+          <div className="waiting-pulse" aria-label="開始合図を確認中" />
+          {feedback ? <p className="message message--error">{feedback}</p> : null}
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="play-shell">
       <header className="player-header">
@@ -245,12 +316,9 @@ export function PlayerApp({
           </div>
           <CountdownTimer
             status={state?.event.status}
-            endsAt={state?.event.endsAt ?? null}
+            deadlineAt={deadlineAt}
             onExpire={() => {
               setTimeUp(true);
-              if (playerId) {
-                void loadState(playerId);
-              }
             }}
           />
         </div>
@@ -294,20 +362,6 @@ export function PlayerApp({
       </section>
     </main>
   );
-}
-
-function isExpired(state: StateResponse) {
-  if (state.event.status === "ended") {
-    return true;
-  }
-
-  const referenceTime = state.event.serverNow
-    ? new Date(state.event.serverNow).getTime()
-    : Date.now();
-
-  return state.event.endsAt
-    ? new Date(state.event.endsAt).getTime() <= referenceTime
-    : false;
 }
 
 function upsertTreasure(

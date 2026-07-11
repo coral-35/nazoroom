@@ -351,7 +351,8 @@ async function updateEventRow(client: SupabaseClient, input: UpdateEventInput) {
     .update({
       status: input.status,
       starts_at: input.startsAt,
-      ends_at: input.endsAt
+      ends_at: input.endsAt,
+      duration_minutes: input.durationMinutes
     })
     .eq("id", input.eventId)
     .select("*")
@@ -442,6 +443,7 @@ function mapEvent(row: any): EventRecord {
     status: row.status,
     startsAt: row.starts_at,
     endsAt: row.ends_at,
+    durationMinutes: row.duration_minutes ?? 60,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };

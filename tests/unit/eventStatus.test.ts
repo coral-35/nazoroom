@@ -44,6 +44,7 @@ function makeEvent(partial: Partial<EventRecord>): EventRecord {
     status: "active",
     startsAt: null,
     endsAt: null,
+    durationMinutes: 60,
     ...partial
   };
 }

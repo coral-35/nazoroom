@@ -13,13 +13,22 @@ describe("event control service", () => {
 
     expect(result.event.status).toBe("active");
     expect(result.event.startsAt).toBe("2026-07-09T10:00:00.000Z");
-    expect(result.event.endsAt).toBe("2026-07-09T10:30:00.000Z");
+    expect(result.event.endsAt).toBeNull();
+    expect(result.event.durationMinutes).toBe(30);
   });
 
   it("closes exploration before publishing results", async () => {
-    const repository = createMemoryRepository(createSeedMemoryState(now));
+    const state = createSeedMemoryState(now);
+    state.events[0] = {
+      ...state.events[0],
+      status: "draft",
+      startsAt: null,
+      endsAt: null
+    };
+    const repository = createMemoryRepository(state);
     const activeService = createNazoroomService(repository, { now: () => now });
     const joined = await activeService.joinEvent(DEFAULT_EVENT_ID, "A");
+    await activeService.controlEvent(DEFAULT_EVENT_ID, "start_exploration", 60);
     await activeService.unlock(DEFAULT_EVENT_ID, joined.player.id, "305", "ひかり");
 
     const closeTime = new Date("2026-07-09T10:15:00.000Z");
@@ -64,9 +73,33 @@ describe("event control service", () => {
       "参加情報が確認できません。再参加してください。"
     );
   });
+
+  it("summarizes participants and results for the admin dashboard", async () => {
+    const service = makeService();
+    const playerA = await service.joinEvent(DEFAULT_EVENT_ID, "A");
+    await service.joinEvent(DEFAULT_EVENT_ID, "B");
+    await service.controlEvent(DEFAULT_EVENT_ID, "start_exploration", 60);
+    await service.unlock(DEFAULT_EVENT_ID, playerA.player.id, "305", "ひかり");
+
+    const dashboard = await service.getAdminDashboard(DEFAULT_EVENT_ID);
+
+    expect(dashboard.totalPlayers).toBe(2);
+    expect(dashboard.totalUnlocks).toBe(1);
+    expect(dashboard.players[0]).toMatchObject({
+      nickname: "A",
+      treasureCount: 1
+    });
+  });
 });
 
 function makeService() {
-  const repository = createMemoryRepository(createSeedMemoryState(now));
+  const state = createSeedMemoryState(now);
+  state.events[0] = {
+    ...state.events[0],
+    status: "draft",
+    startsAt: null,
+    endsAt: null
+  };
+  const repository = createMemoryRepository(state);
   return createNazoroomService(repository, { now: () => now });
 }

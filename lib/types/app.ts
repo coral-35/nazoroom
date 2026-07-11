@@ -21,6 +21,7 @@ export type EventRecord = {
   status: EventStatus;
   startsAt: string | null;
   endsAt: string | null;
+  durationMinutes: number;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -159,6 +160,13 @@ export type StateResponse = {
 export type AdminEventControlResponse = {
   event: PublicEvent;
   message: string;
+};
+
+export type AdminDashboardResponse = {
+  event: PublicEvent;
+  totalPlayers: number;
+  totalUnlocks: number;
+  players: RankingRow[];
 };
 
 export type AdminRoomsResponse = {

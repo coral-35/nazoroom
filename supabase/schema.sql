@@ -16,6 +16,7 @@ create table if not exists public.events (
   status text not null default 'draft' check (status in ('draft', 'active', 'ended')),
   starts_at timestamptz,
   ends_at timestamptz,
+  duration_minutes integer not null default 60 check (duration_minutes between 1 and 1440),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

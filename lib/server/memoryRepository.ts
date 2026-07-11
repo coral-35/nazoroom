@@ -39,7 +39,6 @@ const ROOM_A01_ID = "10000000-0000-0000-0000-000000000003";
 
 export function createSeedMemoryState(now: Date = new Date()): MemoryState {
   const startsAt = new Date(now.getTime() - 5 * 60_000).toISOString();
-  const endsAt = new Date(now.getTime() + 60 * 60_000).toISOString();
   const createdAt = now.toISOString();
 
   return {
@@ -49,7 +48,8 @@ export function createSeedMemoryState(now: Date = new Date()): MemoryState {
         title: "MVPテスト宝探し",
         status: "active",
         startsAt,
-        endsAt,
+        endsAt: null,
+        durationMinutes: 60,
         createdAt,
         updatedAt: createdAt
       }
@@ -370,6 +370,7 @@ export function createMemoryRepository(
       status: input.status,
       startsAt: input.startsAt,
       endsAt: input.endsAt,
+      durationMinutes: input.durationMinutes,
       updatedAt: new Date().toISOString()
     };
     state.events[index] = next;

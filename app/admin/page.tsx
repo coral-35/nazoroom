@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { AdminEventControl } from "@/components/admin/AdminEventControl";
-import { AdminRoomEditor } from "@/components/admin/AdminRoomEditor";
+import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { getNazoroomService } from "@/lib/server/service";
 import { DEFAULT_EVENT_ID } from "@/lib/types/app";
 
 export default async function AdminPage() {
   const service = getNazoroomService();
-  const [adminState, adminRooms] = await Promise.all([
+  const [adminState, dashboard] = await Promise.all([
     service.getAdminEvent(DEFAULT_EVENT_ID),
-    service.listAdminRooms(DEFAULT_EVENT_ID)
+    service.getAdminDashboard(DEFAULT_EVENT_ID)
   ]);
 
   return (
@@ -18,9 +18,14 @@ export default async function AdminPage() {
           <p className="kicker">管理</p>
           <h1 className="page-title">MVP 管理用ページ</h1>
         </div>
-        <Link href="/results" className="button button--secondary button--compact">
-          結果画面
-        </Link>
+        <div className="admin-header-actions">
+          <Link href="/admin/problems" className="button button--secondary button--compact">
+            問題編集
+          </Link>
+          <Link href="/results" className="button button--secondary button--compact">
+            結果画面
+          </Link>
+        </div>
       </div>
       <section className="panel section-gap">
         <h2 className="card-title">seed データで確認する</h2>
@@ -41,11 +46,12 @@ export default async function AdminPage() {
           initialMessage={adminState.message}
         />
       </section>
-      <AdminRoomEditor
-        eventId={DEFAULT_EVENT_ID}
-        apiBasePath="/api/admin/event"
-        initialRooms={adminRooms.rooms}
-      />
+      <section className="section-gap">
+        <AdminDashboard
+          apiBasePath="/api/admin/event"
+          initialDashboard={dashboard}
+        />
+      </section>
     </main>
   );
 }

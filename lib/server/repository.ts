@@ -44,6 +44,7 @@ export type UpdateEventInput = {
   status: EventRecord["status"];
   startsAt: string | null;
   endsAt: string | null;
+  durationMinutes: number;
 };
 
 export type UpsertRoomInput = {

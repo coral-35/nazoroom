@@ -21,7 +21,7 @@ export function AdminEventControl({
   initialMessage
 }: AdminEventControlProps) {
   const [event, setEvent] = useState(initialEvent);
-  const [durationMinutes, setDurationMinutes] = useState(60);
+  const [durationMinutes, setDurationMinutes] = useState(initialEvent.durationMinutes);
   const [message, setMessage] = useState(initialMessage);
   const [error, setError] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<EventControlAction | null>(null);
@@ -68,7 +68,7 @@ export function AdminEventControl({
       <div className="admin-status-grid">
         <StatusItem label="状態" value={event.status} />
         <StatusItem label="開始" value={formatDateTime(event.startsAt)} />
-        <StatusItem label="終了" value={formatDateTime(event.endsAt)} />
+        <StatusItem label="手動終了" value={formatDateTime(event.endsAt)} />
       </div>
 
       <label className="field">

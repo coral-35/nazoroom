@@ -6,11 +6,6 @@ test("player can explore, unlock, and avoid duplicate treasure", async ({ page }
   });
   expect(resetResponse.ok()).toBeTruthy();
 
-  const startResponse = await page.request.post("/api/admin/event/control", {
-    data: { action: "start_exploration", durationMinutes: 60 }
-  });
-  expect(startResponse.ok()).toBeTruthy();
-
   const nickname = `E2E-${Date.now()}`;
   const joinResponse = await page.request.post("/api/event/join", {
     data: { nickname }
@@ -19,6 +14,12 @@ test("player can explore, unlock, and avoid duplicate treasure", async ({ page }
   const joined = (await joinResponse.json()) as { player: { id: string } };
 
   await page.goto(`/play?playerId=${joined.player.id}`);
+  await expect(page.getByText("開始を待っています")).toBeVisible();
+
+  const startResponse = await page.request.post("/api/admin/event/control", {
+    data: { action: "start_exploration", durationMinutes: 60 }
+  });
+  expect(startResponse.ok()).toBeTruthy();
 
   await expect(page.getByText("残り時間")).toBeVisible();
 
