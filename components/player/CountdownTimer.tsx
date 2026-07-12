@@ -42,7 +42,7 @@ export function CountdownTimer({ status, deadlineAt, onExpire }: CountdownTimerP
     return () => window.clearInterval(intervalId);
   }, [deadlineAt, status]);
 
-  if (!deadlineAt) {
+  if (!deadlineAt && status !== "ended") {
     return (
       <div className="timer-box">
         <p className="timer-label">残り時間</p>

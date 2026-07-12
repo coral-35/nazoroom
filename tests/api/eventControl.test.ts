@@ -29,7 +29,7 @@ describe("event control service", () => {
     const activeService = createNazoroomService(repository, { now: () => now });
     const joined = await activeService.joinEvent(DEFAULT_EVENT_ID, "A");
     await activeService.controlEvent(DEFAULT_EVENT_ID, "start_exploration", 60);
-    await activeService.unlock(DEFAULT_EVENT_ID, joined.player.id, "305", "ひかり");
+    await activeService.answer(DEFAULT_EVENT_ID, joined.player.id, "305", "ひかり");
 
     const closeTime = new Date("2026-07-09T10:15:00.000Z");
     const closeService = createNazoroomService(repository, { now: () => closeTime });
@@ -63,7 +63,7 @@ describe("event control service", () => {
     const service = makeService();
     const joined = await service.joinEvent(DEFAULT_EVENT_ID, "A");
 
-    await service.unlock(DEFAULT_EVENT_ID, joined.player.id, "305", "ひかり");
+    await service.answer(DEFAULT_EVENT_ID, joined.player.id, "305", "ひかり");
     const reset = await service.controlEvent(DEFAULT_EVENT_ID, "reset");
 
     expect(reset.event.status).toBe("draft");
@@ -79,15 +79,15 @@ describe("event control service", () => {
     const playerA = await service.joinEvent(DEFAULT_EVENT_ID, "A");
     await service.joinEvent(DEFAULT_EVENT_ID, "B");
     await service.controlEvent(DEFAULT_EVENT_ID, "start_exploration", 60);
-    await service.unlock(DEFAULT_EVENT_ID, playerA.player.id, "305", "ひかり");
+    await service.answer(DEFAULT_EVENT_ID, playerA.player.id, "305", "ひかり");
 
     const dashboard = await service.getAdminDashboard(DEFAULT_EVENT_ID);
 
     expect(dashboard.totalPlayers).toBe(2);
-    expect(dashboard.totalUnlocks).toBe(1);
+    expect(dashboard.totalClears).toBe(1);
     expect(dashboard.players[0]).toMatchObject({
       nickname: "A",
-      treasureCount: 1
+      clearedRoomCount: 1
     });
   });
 });

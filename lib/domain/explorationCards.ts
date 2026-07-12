@@ -4,9 +4,9 @@ export function sortExploredRoomCards(
   cards: ExploredRoomCard[]
 ): ExploredRoomCard[] {
   return [...cards].sort((a, b) => {
-    const unlockedOrder = Number(Boolean(a.unlocked)) - Number(Boolean(b.unlocked));
-    if (unlockedOrder !== 0) {
-      return unlockedOrder;
+    const clearedOrder = Number(Boolean(a.cleared)) - Number(Boolean(b.cleared));
+    if (clearedOrder !== 0) {
+      return clearedOrder;
     }
 
     const createdOrder = toTime(a.createdAt) - toTime(b.createdAt);

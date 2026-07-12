@@ -6,11 +6,12 @@ type ExplorePanelProps = {
   onRoomCodeChange: (value: string) => void;
   onAnswerChange: (value: string) => void;
   onExplore: () => void;
-  onUnlock: () => void;
+  onAnswer: () => void;
   feedback: string | null;
   exploreBusy: boolean;
-  unlockBusy: boolean;
-  disabled: boolean;
+  answerBusy: boolean;
+  exploreDisabled: boolean;
+  answerDisabled: boolean;
 };
 
 export function ExplorePanel({
@@ -19,14 +20,16 @@ export function ExplorePanel({
   onRoomCodeChange,
   onAnswerChange,
   onExplore,
-  onUnlock,
+  onAnswer,
   feedback,
   exploreBusy,
-  unlockBusy,
-  disabled
+  answerBusy,
+  exploreDisabled,
+  answerDisabled
 }: ExplorePanelProps) {
-  const exploreDisabled = disabled || exploreBusy || !roomCode.trim();
-  const unlockDisabled = disabled || unlockBusy || !roomCode.trim() || !answer.trim();
+  const isExploreDisabled = exploreDisabled || exploreBusy || !roomCode.trim();
+  const isAnswerDisabled =
+    answerDisabled || answerBusy || !roomCode.trim() || !answer.trim();
 
   return (
     <div className="explore-panel">
@@ -46,7 +49,7 @@ export function ExplorePanel({
         <button
           type="button"
           onClick={onExplore}
-          disabled={exploreDisabled}
+          disabled={isExploreDisabled}
           className="button button--primary button--compact"
         >
           {exploreBusy ? "探索中" : "探索"}
@@ -66,11 +69,11 @@ export function ExplorePanel({
         />
         <button
           type="button"
-          onClick={onUnlock}
-          disabled={unlockDisabled}
+          onClick={onAnswer}
+          disabled={isAnswerDisabled}
           className="button button--dark button--compact"
         >
-          {unlockBusy ? "解錠中" : "解錠"}
+          {answerBusy ? "解答中" : "解答"}
         </button>
       </div>
       {feedback ? (

@@ -4,14 +4,14 @@ import type {
   EventRecord,
   ExplorationLogRecord,
   PlayerRecord,
-  PlayerTreasureRecord,
+  PlayerClearRecord,
   RoomAnswerRecord,
   RoomRecord,
-  UnlockAttemptRecord
+  AnswerAttemptRecord
 } from "@/lib/types/app";
 import {
   buildExploredRoomCard,
-  type CreateTreasureInput,
+  type CreateClearInput,
   type NazoroomRepository,
   type UpdateEventInput,
   type UpsertRoomInput
@@ -39,8 +39,8 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
 
     async resetEventProgress(input) {
       const tables = [
-        "unlock_attempts",
-        "player_treasures",
+        "answer_attempts",
+        "player_cleared_rooms",
         "exploration_logs",
         "players"
       ];
@@ -133,7 +133,7 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
     },
 
     async listExplorationCards(eventId, playerId) {
-      const [{ data: logData, error: logError }, { data: treasureData, error: treasureError }] =
+      const [{ data: logData, error: logError }, { data: clearData, error: clearError }] =
         await Promise.all([
           client
             .from("exploration_logs")
@@ -142,7 +142,7 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
             .eq("player_id", playerId)
             .order("created_at", { ascending: true }),
           client
-            .from("player_treasures")
+            .from("player_cleared_rooms")
             .select("room_id")
             .eq("event_id", eventId)
             .eq("player_id", playerId)
@@ -151,12 +151,12 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
       if (logError) {
         throw logError;
       }
-      if (treasureError) {
-        throw treasureError;
+      if (clearError) {
+        throw clearError;
       }
 
-      const unlockedRoomIds = new Set(
-        (treasureData ?? []).map((treasure) => treasure.room_id as string)
+      const clearedRoomIds = new Set(
+        (clearData ?? []).map((clear) => clear.room_id as string)
       );
 
       const cards = (logData ?? []).map((row) => {
@@ -167,26 +167,26 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
         return buildExploredRoomCard({
           log,
           room,
-          unlocked: log.roomId ? unlockedRoomIds.has(log.roomId) : false
+          cleared: log.roomId ? clearedRoomIds.has(log.roomId) : false
         });
       });
 
       return sortExploredRoomCards(cards);
     },
 
-    async listPlayerTreasures(eventId, playerId) {
+    async listPlayerClears(eventId, playerId) {
       const { data, error } = await client
-        .from("player_treasures")
-        .select("*, rooms(room_code, treasure_description)")
+        .from("player_cleared_rooms")
+        .select("*, rooms(room_code)")
         .eq("event_id", eventId)
         .eq("player_id", playerId)
-        .order("unlocked_at", { ascending: true });
+        .order("cleared_at", { ascending: true });
 
       if (error) {
         throw error;
       }
 
-      return (data ?? []).map(mapPlayerTreasure);
+      return (data ?? []).map(mapPlayerClear);
     },
 
     async listRoomAnswers(roomId) {
@@ -204,9 +204,9 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
       }));
     },
 
-    async createUnlockAttempt(input) {
+    async createAnswerAttempt(input) {
       const { data, error } = await client
-        .from("unlock_attempts")
+        .from("answer_attempts")
         .insert({
           event_id: input.eventId,
           player_id: input.playerId,
@@ -224,13 +224,13 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
         throw error;
       }
 
-      return mapUnlockAttempt(data);
+      return mapAnswerAttempt(data);
     },
 
-    async getPlayerTreasure(eventId, playerId, roomId) {
+    async getPlayerClear(eventId, playerId, roomId) {
       const { data, error } = await client
-        .from("player_treasures")
-        .select("*, rooms(room_code, treasure_description)")
+        .from("player_cleared_rooms")
+        .select("*, rooms(room_code)")
         .eq("event_id", eventId)
         .eq("player_id", playerId)
         .eq("room_id", roomId)
@@ -240,45 +240,44 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
         throw error;
       }
 
-      return data ? mapPlayerTreasure(data) : null;
+      return data ? mapPlayerClear(data) : null;
     },
 
-    async createPlayerTreasureIdempotent(input: CreateTreasureInput) {
-      const existing = await this.getPlayerTreasure(
+    async createPlayerClearIdempotent(input: CreateClearInput) {
+      const existing = await this.getPlayerClear(
         input.eventId,
         input.playerId,
         input.room.id
       );
       if (existing) {
-        return { treasure: existing, created: false };
+        return { clearedRoom: existing, created: false };
       }
 
       const { data, error } = await client
-        .from("player_treasures")
+        .from("player_cleared_rooms")
         .insert({
           event_id: input.eventId,
           player_id: input.playerId,
-          room_id: input.room.id,
-          treasure_name: input.room.treasureName
+          room_id: input.room.id
         })
-        .select("*, rooms(room_code, treasure_description)")
+        .select("*, rooms(room_code)")
         .single();
 
       if (error) {
         if (error.code === "23505") {
-          const treasure = await this.getPlayerTreasure(
+          const clearedRoom = await this.getPlayerClear(
             input.eventId,
             input.playerId,
             input.room.id
           );
-          if (treasure) {
-            return { treasure, created: false };
+          if (clearedRoom) {
+            return { clearedRoom, created: false };
           }
         }
         throw error;
       }
 
-      return { treasure: mapPlayerTreasure(data), created: true };
+      return { clearedRoom: mapPlayerClear(data), created: true };
     },
 
     async listPlayers(eventId) {
@@ -329,18 +328,18 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
       return upsertRoomRow(client, input);
     },
 
-    async listAllTreasures(eventId) {
+    async listAllClears(eventId) {
       const { data, error } = await client
-        .from("player_treasures")
-        .select("*, rooms(room_code, treasure_description)")
+        .from("player_cleared_rooms")
+        .select("*, rooms(room_code)")
         .eq("event_id", eventId)
-        .order("unlocked_at", { ascending: true });
+        .order("cleared_at", { ascending: true });
 
       if (error) {
         throw error;
       }
 
-      return (data ?? []).map(mapPlayerTreasure);
+      return (data ?? []).map(mapPlayerClear);
     }
   };
 }
@@ -375,8 +374,6 @@ async function upsertRoomRow(client: SupabaseClient, input: UpsertRoomInput) {
     puzzle_text: input.puzzleText,
     puzzle_image_url: input.puzzleImageUrl,
     hidden_message: input.hiddenMessage,
-    treasure_name: input.treasureName,
-    treasure_description: input.treasureDescription,
     sort_order: input.sortOrder,
     is_active: input.isActive
   };
@@ -469,8 +466,6 @@ function mapRoom(row: any): RoomRecord {
     puzzleText: row.puzzle_text,
     puzzleImageUrl: row.puzzle_image_url,
     hiddenMessage: row.hidden_message,
-    treasureName: row.treasure_name,
-    treasureDescription: row.treasure_description,
     sortOrder: row.sort_order,
     isActive: row.is_active,
     createdAt: row.created_at,
@@ -512,7 +507,7 @@ function mapExplorationLog(row: any): ExplorationLogRecord {
   };
 }
 
-function mapUnlockAttempt(row: any): UnlockAttemptRecord {
+function mapAnswerAttempt(row: any): AnswerAttemptRecord {
   return {
     id: row.id,
     eventId: row.event_id,
@@ -527,7 +522,7 @@ function mapUnlockAttempt(row: any): UnlockAttemptRecord {
   };
 }
 
-function mapPlayerTreasure(row: any): PlayerTreasureRecord {
+function mapPlayerClear(row: any): PlayerClearRecord {
   const room = normalizeJoinedRow(row.rooms);
   return {
     id: row.id,
@@ -535,9 +530,7 @@ function mapPlayerTreasure(row: any): PlayerTreasureRecord {
     playerId: row.player_id,
     roomId: row.room_id,
     roomCode: room?.room_code ?? row.room_code ?? "",
-    treasureName: row.treasure_name,
-    treasureDescription: room?.treasure_description ?? null,
-    unlockedAt: row.unlocked_at
+    clearedAt: row.cleared_at
   };
 }
 

@@ -3,11 +3,11 @@ import type {
   ExplorationLogRecord,
   ExploreResultType,
   PlayerRecord,
-  PlayerTreasureRecord,
+  PlayerClearRecord,
   RoomAnswerRecord,
   RoomRecord,
-  UnlockAttemptRecord,
-  UnlockResult,
+  AnswerAttemptRecord,
+  AnswerResult,
   EventRecord
 } from "@/lib/types/app";
 import type { AdminRoomRecord, ExploreType } from "@/lib/types/app";
@@ -22,7 +22,7 @@ export type CreateExplorationLogInput = {
   message: string;
 };
 
-export type CreateUnlockAttemptInput = {
+export type CreateAnswerAttemptInput = {
   eventId: string;
   playerId: string;
   roomId: string | null;
@@ -30,10 +30,10 @@ export type CreateUnlockAttemptInput = {
   normalizedRoomCode: string;
   inputAnswer: string;
   normalizedAnswer: string;
-  result: UnlockResult;
+  result: AnswerResult;
 };
 
-export type CreateTreasureInput = {
+export type CreateClearInput = {
   eventId: string;
   playerId: string;
   room: RoomRecord;
@@ -57,8 +57,6 @@ export type UpsertRoomInput = {
   puzzleText: string | null;
   puzzleImageUrl: string | null;
   hiddenMessage: string | null;
-  treasureName: string;
-  treasureDescription: string | null;
   sortOrder: number;
   isActive: boolean;
   answers: {
@@ -79,30 +77,30 @@ export type NazoroomRepository = {
   ): Promise<RoomRecord | null>;
   createExplorationLog(input: CreateExplorationLogInput): Promise<ExplorationLogRecord>;
   listExplorationCards(eventId: string, playerId: string): Promise<ExploredRoomCard[]>;
-  listPlayerTreasures(eventId: string, playerId: string): Promise<PlayerTreasureRecord[]>;
+  listPlayerClears(eventId: string, playerId: string): Promise<PlayerClearRecord[]>;
   listRoomAnswers(roomId: string): Promise<Pick<RoomAnswerRecord, "normalizedAnswer">[]>;
-  createUnlockAttempt(input: CreateUnlockAttemptInput): Promise<UnlockAttemptRecord>;
-  getPlayerTreasure(
+  createAnswerAttempt(input: CreateAnswerAttemptInput): Promise<AnswerAttemptRecord>;
+  getPlayerClear(
     eventId: string,
     playerId: string,
     roomId: string
-  ): Promise<PlayerTreasureRecord | null>;
-  createPlayerTreasureIdempotent(
-    input: CreateTreasureInput
-  ): Promise<{ treasure: PlayerTreasureRecord; created: boolean }>;
+  ): Promise<PlayerClearRecord | null>;
+  createPlayerClearIdempotent(
+    input: CreateClearInput
+  ): Promise<{ clearedRoom: PlayerClearRecord; created: boolean }>;
   listPlayers(eventId: string): Promise<PlayerRecord[]>;
   listRooms(eventId: string): Promise<RoomRecord[]>;
   listAdminRooms(eventId: string): Promise<AdminRoomRecord[]>;
   upsertRoom(input: UpsertRoomInput): Promise<AdminRoomRecord>;
-  listAllTreasures(eventId: string): Promise<PlayerTreasureRecord[]>;
+  listAllClears(eventId: string): Promise<PlayerClearRecord[]>;
 };
 
 export function buildExploredRoomCard(input: {
   log: ExplorationLogRecord;
   room: RoomRecord | null;
-  unlocked: boolean;
+  cleared: boolean;
 }): ExploredRoomCard {
-  const { log, room, unlocked } = input;
+  const { log, room, cleared } = input;
   return {
     logId: log.id,
     roomCode: room?.roomCode ?? log.inputRoomCode,
@@ -113,6 +111,6 @@ export function buildExploredRoomCard(input: {
     puzzleImageUrl:
       log.resultType === "show_puzzle" ? room?.puzzleImageUrl ?? undefined : undefined,
     createdAt: log.createdAt,
-    unlocked
+    cleared
   };
 }

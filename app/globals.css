@@ -243,6 +243,20 @@ img {
   margin: 12px 0 0;
 }
 
+.result-ranking,
+.cleared-room-panel,
+.result-waiting {
+  margin-top: 16px;
+}
+
+.cleared-room-codes {
+  margin: 12px 0 0;
+  color: var(--accent-strong);
+  font-size: 1.05rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
 .status-item {
   min-width: 0;
   border-radius: 8px;

@@ -21,7 +21,7 @@ export function RankingTable({ ranking }: RankingTableProps) {
                   <th>順位</th>
                   <th>名前</th>
                   <th className="text-right">得点</th>
-                  <th>宝</th>
+                  <th>クリア部屋</th>
                 </tr>
               </thead>
               <tbody>
@@ -30,20 +30,20 @@ export function RankingTable({ ranking }: RankingTableProps) {
                     <td className="strong">{index + 1}</td>
                     <td>{row.nickname}</td>
                     <td className="text-right strong">{row.score}</td>
-                    <td>{row.treasures.join("、") || "-"}</td>
+                    <td>{row.clearedRooms.join("、") || "-"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
           <div className="score-list">
-            {ranking.treasureScores.map((score) => (
+            {ranking.roomScores.map((score) => (
               <div
                 key={score.roomCode}
                 className="score-row"
               >
                 <span>
-                  {score.treasureName} / 入手 {score.ownerCount}人
+                  部屋 {score.roomCode} / クリア {score.ownerCount}人
                 </span>
                 <span className="strong">{score.score}点</span>
               </div>

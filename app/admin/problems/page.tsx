@@ -3,6 +3,8 @@ import { AdminRoomEditor } from "@/components/admin/AdminRoomEditor";
 import { getNazoroomService } from "@/lib/server/service";
 import { DEFAULT_EVENT_ID } from "@/lib/types/app";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminProblemsPage() {
   const rooms = await getNazoroomService().listAdminRooms(DEFAULT_EVENT_ID);
 

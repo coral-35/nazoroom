@@ -6,7 +6,7 @@ import { DEFAULT_EVENT_ID } from "@/lib/types/app";
 export async function POST(request: Request) {
   try {
     const body = await readJsonObject(request);
-    const response = await getNazoroomService().unlock(
+    const response = await getNazoroomService().answer(
       DEFAULT_EVENT_ID,
       String(body.playerId ?? ""),
       body.roomCode,

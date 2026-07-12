@@ -39,8 +39,6 @@ create table if not exists public.rooms (
   puzzle_text text,
   puzzle_image_url text,
   hidden_message text,
-  treasure_name text not null,
-  treasure_description text,
   sort_order integer not null default 0,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
@@ -69,17 +67,16 @@ create table if not exists public.exploration_logs (
   created_at timestamptz not null default now()
 );
 
-create table if not exists public.player_treasures (
+create table if not exists public.player_cleared_rooms (
   id uuid primary key default gen_random_uuid(),
   event_id uuid not null references public.events(id) on delete cascade,
   player_id uuid not null references public.players(id) on delete cascade,
   room_id uuid not null references public.rooms(id) on delete cascade,
-  treasure_name text not null,
-  unlocked_at timestamptz not null default now(),
+  cleared_at timestamptz not null default now(),
   unique (player_id, room_id)
 );
 
-create table if not exists public.unlock_attempts (
+create table if not exists public.answer_attempts (
   id uuid primary key default gen_random_uuid(),
   event_id uuid not null references public.events(id) on delete cascade,
   player_id uuid not null references public.players(id) on delete cascade,
@@ -93,7 +90,7 @@ create table if not exists public.unlock_attempts (
       'correct',
       'incorrect',
       'expired',
-      'already_unlocked',
+      'already_cleared',
       'room_not_found'
     )
   ),
@@ -117,22 +114,22 @@ create index if not exists rooms_event_code_idx
 create index if not exists room_answers_room_id_idx on public.room_answers(room_id);
 create index if not exists exploration_logs_player_idx
   on public.exploration_logs(event_id, player_id, created_at);
-create index if not exists player_treasures_event_idx
-  on public.player_treasures(event_id, player_id);
-create index if not exists unlock_attempts_player_idx
-  on public.unlock_attempts(event_id, player_id, created_at);
+create index if not exists player_cleared_rooms_event_idx
+  on public.player_cleared_rooms(event_id, player_id);
+create index if not exists answer_attempts_player_idx
+  on public.answer_attempts(event_id, player_id, created_at);
 
 alter table public.events enable row level security;
 alter table public.players enable row level security;
 alter table public.rooms enable row level security;
 alter table public.room_answers enable row level security;
 alter table public.exploration_logs enable row level security;
-alter table public.player_treasures enable row level security;
-alter table public.unlock_attempts enable row level security;
+alter table public.player_cleared_rooms enable row level security;
+alter table public.answer_attempts enable row level security;
 
 grant usage on schema public to service_role;
 grant select, insert, update, delete on all tables in schema public to service_role;
 grant usage, select on all sequences in schema public to service_role;
 
 revoke all on public.room_answers from anon, authenticated;
-revoke all on public.unlock_attempts from anon, authenticated;
+revoke all on public.answer_attempts from anon, authenticated;

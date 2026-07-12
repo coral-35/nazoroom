@@ -19,7 +19,7 @@ import type {
   RankingResponse,
   RoomRecord,
   StateResponse,
-  UnlockResponse
+  AnswerResponse
 } from "@/lib/types/app";
 import { parseAnswer, parseNickname, parseRoomCode } from "@/lib/validations/schemas";
 
@@ -57,8 +57,8 @@ export function createNazoroomService(
       return {
         event: publicEvent(event, now()),
         totalPlayers: ranking.totalPlayers,
-        totalUnlocks: ranking.ranking.reduce(
-          (total, player) => total + player.treasureCount,
+        totalClears: ranking.ranking.reduce(
+          (total, player) => total + player.clearedRoomCount,
           0
         ),
         players: ranking.ranking
@@ -196,9 +196,9 @@ export function createNazoroomService(
         throw new AppError("参加情報が確認できません。再参加してください。", 404);
       }
 
-      const [explorationLogs, treasures, ranking] = await Promise.all([
+      const [explorationLogs, clearedRooms, ranking] = await Promise.all([
         repository.listExplorationCards(eventId, playerId),
-        repository.listPlayerTreasures(eventId, playerId),
+        repository.listPlayerClears(eventId, playerId),
         event.status === "ended" ? calculateEventRanking(repository, eventId) : null
       ]);
 
@@ -209,11 +209,9 @@ export function createNazoroomService(
           nickname: player.nickname
         },
         explorationLogs,
-        treasures: treasures.map((treasure) => ({
-          roomCode: treasure.roomCode,
-          name: treasure.treasureName,
-          description: treasure.treasureDescription,
-          unlockedAt: treasure.unlockedAt
+        clearedRooms: clearedRooms.map((clearedRoom) => ({
+          roomCode: clearedRoom.roomCode,
+          clearedAt: clearedRoom.clearedAt
         })),
         ranking
       };
@@ -234,7 +232,7 @@ export function createNazoroomService(
       if (!player) {
         throw new AppError("参加情報が確認できません。再参加してください。", 404);
       }
-      if (!isEventActive(event, now())) {
+      if (event.status === "draft") {
         throw new AppError(eventNotActiveMessage(event, now()), 409);
       }
 
@@ -259,8 +257,8 @@ export function createNazoroomService(
         message
       });
 
-      const unlocked = Boolean(await repository.getPlayerTreasure(eventId, playerId, room.id));
-      const card = buildExploredRoomCard({ log, room, unlocked });
+      const cleared = Boolean(await repository.getPlayerClear(eventId, playerId, room.id));
+      const card = buildExploredRoomCard({ log, room, cleared });
 
       return {
         resultType: card.resultType,
@@ -270,12 +268,12 @@ export function createNazoroomService(
       };
     },
 
-    async unlock(
+    async answer(
       eventId: string,
       playerId: string,
       rawRoomCode: unknown,
       rawAnswer: unknown
-    ): Promise<UnlockResponse> {
+    ): Promise<AnswerResponse> {
       const inputRoomCode = parseRoomCode(rawRoomCode);
       const inputAnswer = parseAnswer(rawAnswer);
       const normalizedRoomCode = normalizeRoomCode(inputRoomCode);
@@ -292,7 +290,7 @@ export function createNazoroomService(
       }
 
       if (!isEventActive(event, now())) {
-        await repository.createUnlockAttempt({
+        await repository.createAnswerAttempt({
           eventId,
           playerId,
           roomId: room?.id ?? null,
@@ -309,7 +307,7 @@ export function createNazoroomService(
       }
 
       if (!room) {
-        await repository.createUnlockAttempt({
+        await repository.createAnswerAttempt({
           eventId,
           playerId,
           roomId: null,
@@ -325,13 +323,13 @@ export function createNazoroomService(
         };
       }
 
-      const existingTreasure = await repository.getPlayerTreasure(
+      const existingClear = await repository.getPlayerClear(
         eventId,
         playerId,
         room.id
       );
-      if (existingTreasure) {
-        await repository.createUnlockAttempt({
+      if (existingClear) {
+        await repository.createAnswerAttempt({
           eventId,
           playerId,
           roomId: room.id,
@@ -339,16 +337,14 @@ export function createNazoroomService(
           normalizedRoomCode,
           inputAnswer,
           normalizedAnswer,
-          result: "already_unlocked"
+          result: "already_cleared"
         });
         return {
-          result: "already_unlocked",
-          message: "この部屋の宝はすでに入手済みです。",
-          treasure: {
-            roomCode: existingTreasure.roomCode,
-            name: existingTreasure.treasureName,
-            description: existingTreasure.treasureDescription,
-            unlockedAt: existingTreasure.unlockedAt
+          result: "already_cleared",
+          message: "この部屋はすでにクリアしています。",
+          clearedRoom: {
+            roomCode: existingClear.roomCode,
+            clearedAt: existingClear.clearedAt
           }
         };
       }
@@ -359,7 +355,7 @@ export function createNazoroomService(
       );
 
       if (!isCorrect) {
-        await repository.createUnlockAttempt({
+        await repository.createAnswerAttempt({
           eventId,
           playerId,
           roomId: room.id,
@@ -371,18 +367,18 @@ export function createNazoroomService(
         });
         return {
           result: "incorrect",
-          message: "解錠に失敗した。答えが違うようだ。"
+          message: "不正解です。もう一度考えてみよう。"
         };
       }
 
-      const { treasure, created } = await repository.createPlayerTreasureIdempotent({
+      const { clearedRoom, created } = await repository.createPlayerClearIdempotent({
         eventId,
         playerId,
         room
       });
-      const result = created ? "correct" : "already_unlocked";
+      const result = created ? "correct" : "already_cleared";
 
-      await repository.createUnlockAttempt({
+      await repository.createAnswerAttempt({
         eventId,
         playerId,
         roomId: room.id,
@@ -396,13 +392,11 @@ export function createNazoroomService(
       return {
         result,
         message: created
-          ? `解錠成功。宝『${treasure.treasureName}』を入手した。`
-          : "この部屋の宝はすでに入手済みです。",
-        treasure: {
-          roomCode: treasure.roomCode,
-          name: treasure.treasureName,
-          description: treasure.treasureDescription,
-          unlockedAt: treasure.unlockedAt
+          ? `正解。部屋 ${clearedRoom.roomCode} をクリアしました。`
+          : "この部屋はすでにクリアしています。",
+        clearedRoom: {
+          roomCode: clearedRoom.roomCode,
+          clearedAt: clearedRoom.clearedAt
         }
       };
     },
@@ -430,13 +424,13 @@ async function calculateEventRanking(
   repository: NazoroomRepository,
   eventId: string
 ): Promise<RankingResponse> {
-  const [players, rooms, treasures] = await Promise.all([
+  const [players, rooms, clearedRooms] = await Promise.all([
     repository.listPlayers(eventId),
     repository.listRooms(eventId),
-    repository.listAllTreasures(eventId)
+    repository.listAllClears(eventId)
   ]);
 
-  return calculateRanking({ players, rooms, treasures });
+  return calculateRanking({ players, rooms, clearedRooms });
 }
 
 function publicEvent(event: EventRecord, serverNow: Date) {
@@ -481,7 +475,7 @@ function buildExploreMessage(inputRoomCode: string, room: RoomRecord | null) {
 
 function eventNotActiveMessage(event: EventRecord, at: Date) {
   if (isEventExpired(event, at)) {
-    return "制限時間が終了したため、解錠できない。";
+    return "制限時間が終了したため、解答できません。";
   }
 
   return "イベントはまだ開始されていません。";
@@ -522,8 +516,6 @@ function parseAdminRoomInput(
     puzzleText: parseOptionalText(input.puzzleText, 2_000),
     puzzleImageUrl: parseOptionalText(input.puzzleImageUrl, 500),
     hiddenMessage: parseOptionalText(input.hiddenMessage, 1_000),
-    treasureName: parseRequiredText(input.treasureName, "宝の名前", 120),
-    treasureDescription: parseOptionalText(input.treasureDescription, 1_000),
     sortOrder: parseSortOrder(input.sortOrder),
     isActive: input.isActive !== false,
     answers: parseAdminAnswers(input.answers)
@@ -536,22 +528,6 @@ function parseExploreType(input: unknown): ExploreType {
   }
 
   throw new AppError("表示タイプを選択してください。", 400);
-}
-
-function parseRequiredText(input: unknown, label: string, maxLength: number) {
-  if (typeof input !== "string") {
-    throw new AppError(`${label}を入力してください。`, 400);
-  }
-
-  const value = input.trim();
-  if (!value) {
-    throw new AppError(`${label}を入力してください。`, 400);
-  }
-  if (value.length > maxLength) {
-    throw new AppError(`${label}は${maxLength}文字以内で入力してください。`, 400);
-  }
-
-  return value;
 }
 
 function parseOptionalText(input: unknown, maxLength: number) {

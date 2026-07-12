@@ -42,14 +42,14 @@ export function AdminDashboard({
     <section className="panel admin-dashboard">
       <div className="admin-dashboard-summary">
         <DashboardMetric label="参加" value={`${dashboard.totalPlayers}人`} />
-        <DashboardMetric label="獲得" value={`${dashboard.totalUnlocks}個`} />
+        <DashboardMetric label="クリア" value={`${dashboard.totalClears}件`} />
       </div>
       {dashboard.players.length ? (
         <div className="admin-player-list">
           {dashboard.players.map((player, index) => (
             <div className="admin-player-row" key={player.playerId}>
               <span>{index + 1}. {player.nickname}</span>
-              <span>{player.treasureCount}個 / {player.score}点</span>
+              <span>{player.clearedRoomCount}部屋 / {player.score}点</span>
             </div>
           ))}
         </div>

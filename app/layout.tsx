@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "謎解き宝探し",
-  description: "部屋探索と解答のためのMVPアプリ"
+  title: "謎解きダンジョン",
+  description: "部屋を探索して謎を解くダンジョンイベント"
 };
 
 export default function RootLayout({

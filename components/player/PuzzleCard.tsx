@@ -18,9 +18,9 @@ export function PuzzleCard({ card, index, total }: PuzzleCardProps) {
           </p>
           <h3 className="card-title">部屋 {card.roomCode}</h3>
         </div>
-        {card.unlocked ? (
+        {card.cleared ? (
           <span className="badge">
-            解錠済み
+            クリア済み
           </span>
         ) : null}
       </div>

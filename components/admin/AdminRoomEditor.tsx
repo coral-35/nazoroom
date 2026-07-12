@@ -21,8 +21,6 @@ type EditableRoom = {
   puzzleText: string;
   puzzleImageUrl: string;
   hiddenMessage: string;
-  treasureName: string;
-  treasureDescription: string;
   sortOrder: string;
   isActive: boolean;
   answersText: string;
@@ -86,7 +84,7 @@ export function AdminRoomEditor({
         </div>
       </div>
       <p className="lead lead--small">
-        部屋番号、表示内容、宝、正解を保存します。解答は改行区切りで複数登録できます。
+        部屋番号、表示内容、正解を保存します。解答は改行区切りで複数登録できます。
       </p>
 
       {message ? (
@@ -195,15 +193,6 @@ function RoomForm({ title, room, busy, onChange, onSave }: RoomFormProps) {
             className="input"
           />
         </label>
-        <label className="field">
-          宝の名前
-          <input
-            value={room.treasureName}
-            onChange={(event) => onChange({ treasureName: event.target.value })}
-            className="input"
-            placeholder="月の鍵"
-          />
-        </label>
         <label className="field field--full">
           タイトル
           <input
@@ -235,16 +224,6 @@ function RoomForm({ title, room, busy, onChange, onSave }: RoomFormProps) {
           <textarea
             value={room.hiddenMessage}
             onChange={(event) => onChange({ hiddenMessage: event.target.value })}
-            className="input input--textarea"
-          />
-        </label>
-        <label className="field field--full">
-          宝の説明
-          <textarea
-            value={room.treasureDescription}
-            onChange={(event) =>
-              onChange({ treasureDescription: event.target.value })
-            }
             className="input input--textarea"
           />
         </label>
@@ -289,8 +268,6 @@ function toEditableRoom(room: AdminRoomRecord): EditableRoom {
     puzzleText: room.puzzleText ?? "",
     puzzleImageUrl: room.puzzleImageUrl ?? "",
     hiddenMessage: room.hiddenMessage ?? "",
-    treasureName: room.treasureName,
-    treasureDescription: room.treasureDescription ?? "",
     sortOrder: String(room.sortOrder),
     isActive: room.isActive,
     answersText: room.answers.map((answer) => answer.answerText).join("\n")
@@ -305,8 +282,6 @@ function createEmptyRoom(): EditableRoom {
     puzzleText: "",
     puzzleImageUrl: "",
     hiddenMessage: "",
-    treasureName: "",
-    treasureDescription: "",
     sortOrder: "100",
     isActive: true,
     answersText: ""
@@ -322,8 +297,6 @@ function toPayload(room: EditableRoom) {
     puzzleText: room.puzzleText,
     puzzleImageUrl: room.puzzleImageUrl,
     hiddenMessage: room.hiddenMessage,
-    treasureName: room.treasureName,
-    treasureDescription: room.treasureDescription,
     sortOrder: room.sortOrder,
     isActive: room.isActive,
     answers: room.answersText.split(/\r?\n/)

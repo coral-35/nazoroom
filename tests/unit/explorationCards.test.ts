@@ -24,7 +24,7 @@ function makeCard(
   logId: string,
   roomCode: string,
   createdAt: string,
-  unlocked: boolean
+  cleared: boolean
 ): ExploredRoomCard {
   return {
     logId,
@@ -33,6 +33,6 @@ function makeCard(
     title: `部屋 ${roomCode}`,
     message: `${roomCode} found`,
     createdAt,
-    unlocked
+    cleared
   };
 }

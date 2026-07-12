@@ -1,37 +1,36 @@
 import type {
   PlayerRecord,
-  PlayerTreasureRecord,
+  PlayerClearRecord,
   RankingResponse,
   RoomRecord
 } from "@/lib/types/app";
 
 export function calculateRanking(input: {
   players: Pick<PlayerRecord, "id" | "nickname">[];
-  rooms: Pick<RoomRecord, "id" | "roomCode" | "treasureName" | "sortOrder">[];
-  treasures: Pick<
-    PlayerTreasureRecord,
-    "playerId" | "roomId" | "treasureName" | "unlockedAt"
+  rooms: Pick<RoomRecord, "id" | "roomCode" | "sortOrder">[];
+  clearedRooms: Pick<
+    PlayerClearRecord,
+    "playerId" | "roomId" | "clearedAt"
   >[];
 }): RankingResponse {
-  const uniqueTreasures = dedupeTreasures(input.treasures);
+  const uniqueClears = dedupeClears(input.clearedRooms);
   const totalPlayers = input.players.length;
   const roomsById = new Map(input.rooms.map((room) => [room.id, room]));
 
   const ownersByRoom = new Map<string, Set<string>>();
-  for (const treasure of uniqueTreasures) {
-    const owners = ownersByRoom.get(treasure.roomId) ?? new Set<string>();
-    owners.add(treasure.playerId);
-    ownersByRoom.set(treasure.roomId, owners);
+  for (const clearedRoom of uniqueClears) {
+    const owners = ownersByRoom.get(clearedRoom.roomId) ?? new Set<string>();
+    owners.add(clearedRoom.playerId);
+    ownersByRoom.set(clearedRoom.roomId, owners);
   }
 
-  const treasureScores = input.rooms
+  const roomScores = input.rooms
     .slice()
-    .sort((a, b) => a.sortOrder - b.sortOrder || a.roomCode.localeCompare(b.roomCode))
+    .sort((a, b) => compareRoomCodes(a.roomCode, b.roomCode))
     .map((room) => {
       const ownerCount = ownersByRoom.get(room.id)?.size ?? 0;
       return {
         roomCode: room.roomCode,
-        treasureName: room.treasureName,
         ownerCount,
         score: totalPlayers - ownerCount
       };
@@ -44,59 +43,61 @@ export function calculateRanking(input: {
     })
   );
 
-  const treasuresByPlayer = new Map<
+  const clearsByPlayer = new Map<
     string,
-    Pick<PlayerTreasureRecord, "playerId" | "roomId" | "treasureName" | "unlockedAt">[]
+    Pick<PlayerClearRecord, "playerId" | "roomId" | "clearedAt">[]
   >();
-  for (const treasure of uniqueTreasures) {
-    const playerTreasures = treasuresByPlayer.get(treasure.playerId) ?? [];
-    playerTreasures.push(treasure);
-    treasuresByPlayer.set(treasure.playerId, playerTreasures);
+  for (const clearedRoom of uniqueClears) {
+    const playerClears = clearsByPlayer.get(clearedRoom.playerId) ?? [];
+    playerClears.push(clearedRoom);
+    clearsByPlayer.set(clearedRoom.playerId, playerClears);
   }
 
   const ranking = input.players
     .map((player) => {
-      const treasures = treasuresByPlayer.get(player.id) ?? [];
-      const score = treasures.reduce(
-        (sum, treasure) => sum + (scoreByRoom.get(treasure.roomId) ?? 0),
+      const clearedRooms = clearsByPlayer.get(player.id) ?? [];
+      const score = clearedRooms.reduce(
+        (sum, clearedRoom) => sum + (scoreByRoom.get(clearedRoom.roomId) ?? 0),
         0
       );
-      const lastUnlockedAt = treasures
-        .map((treasure) => treasure.unlockedAt)
+      const lastClearedAt = clearedRooms
+        .map((clearedRoom) => clearedRoom.clearedAt)
         .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
 
       return {
         playerId: player.id,
         nickname: player.nickname,
         score,
-        treasureCount: treasures.length,
-        lastUnlockedAt,
-        treasures: treasures
+        clearedRoomCount: clearedRooms.length,
+        lastClearedAt,
+        clearedRooms: clearedRooms
           .slice()
-          .sort((a, b) => {
-            const roomA = roomsById.get(a.roomId);
-            const roomB = roomsById.get(b.roomId);
-            return (roomA?.sortOrder ?? 0) - (roomB?.sortOrder ?? 0);
-          })
-          .map((treasure) => treasure.treasureName)
+          .sort((a, b) =>
+            compareRoomCodes(
+              roomsById.get(a.roomId)?.roomCode ?? "",
+              roomsById.get(b.roomId)?.roomCode ?? ""
+            )
+          )
+          .map((clearedRoom) => roomsById.get(clearedRoom.roomId)?.roomCode ?? "")
+          .filter(Boolean)
       };
     })
     .sort((a, b) => {
       if (b.score !== a.score) {
         return b.score - a.score;
       }
-      if (b.treasureCount !== a.treasureCount) {
-        return b.treasureCount - a.treasureCount;
+      if (b.clearedRoomCount !== a.clearedRoomCount) {
+        return b.clearedRoomCount - a.clearedRoomCount;
       }
-      if (a.lastUnlockedAt && b.lastUnlockedAt) {
+      if (a.lastClearedAt && b.lastClearedAt) {
         const timeDiff =
-          new Date(a.lastUnlockedAt).getTime() -
-          new Date(b.lastUnlockedAt).getTime();
+          new Date(a.lastClearedAt).getTime() -
+          new Date(b.lastClearedAt).getTime();
         if (timeDiff !== 0) {
           return timeDiff;
         }
-      } else if (a.lastUnlockedAt || b.lastUnlockedAt) {
-        return a.lastUnlockedAt ? -1 : 1;
+      } else if (a.lastClearedAt || b.lastClearedAt) {
+        return a.lastClearedAt ? -1 : 1;
       }
 
       return a.nickname.localeCompare(b.nickname, "ja");
@@ -104,20 +105,24 @@ export function calculateRanking(input: {
 
   return {
     totalPlayers,
-    treasureScores,
+    roomScores,
     ranking
   };
 }
 
-function dedupeTreasures(
-  treasures: Pick<
-    PlayerTreasureRecord,
-    "playerId" | "roomId" | "treasureName" | "unlockedAt"
+function compareRoomCodes(a: string, b: string) {
+  return a.localeCompare(b, "ja", { numeric: true });
+}
+
+function dedupeClears(
+  clearedRooms: Pick<
+    PlayerClearRecord,
+    "playerId" | "roomId" | "clearedAt"
   >[]
 ) {
   const seen = new Set<string>();
-  return treasures.filter((treasure) => {
-    const key = `${treasure.playerId}:${treasure.roomId}`;
+  return clearedRooms.filter((clearedRoom) => {
+    const key = `${clearedRoom.playerId}:${clearedRoom.roomId}`;
     if (seen.has(key)) {
       return false;
     }

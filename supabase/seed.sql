@@ -1,7 +1,7 @@
 insert into public.events (id, title, status, starts_at, ends_at, duration_minutes)
 values (
   '00000000-0000-0000-0000-000000000001',
-  'MVPテスト宝探し',
+  '謎解きダンジョン',
   'draft',
   null,
   null,
@@ -25,8 +25,6 @@ insert into public.rooms (
   puzzle_text,
   puzzle_image_url,
   hidden_message,
-  treasure_name,
-  treasure_description,
   sort_order,
   is_active
 ) values
@@ -40,8 +38,6 @@ insert into public.rooms (
   '時計の針が示す言葉を読め。',
   null,
   null,
-  '月の鍵',
-  '淡く光る銀色の鍵。',
   1,
   true
 ),
@@ -55,8 +51,6 @@ insert into public.rooms (
   null,
   null,
   '部屋204の周囲に、画面には映らない違和感がある。',
-  '星の鍵',
-  '小さな星形の鍵。',
   2,
   true
 ),
@@ -70,8 +64,6 @@ insert into public.rooms (
   '封筒に描かれた線を順にたどれ。',
   null,
   null,
-  '太陽の鍵',
-  'あたたかく光る金色の鍵。',
   3,
   true
 )
@@ -83,8 +75,6 @@ set
   puzzle_text = excluded.puzzle_text,
   puzzle_image_url = excluded.puzzle_image_url,
   hidden_message = excluded.hidden_message,
-  treasure_name = excluded.treasure_name,
-  treasure_description = excluded.treasure_description,
   sort_order = excluded.sort_order,
   is_active = excluded.is_active;
 

@@ -11,7 +11,7 @@ export async function POST(request: Request, context: EventRouteContext) {
   try {
     const eventId = await getEventId(context);
     const body = await readJsonObject(request);
-    const response = await getNazoroomService().unlock(
+    const response = await getNazoroomService().answer(
       eventId,
       typeof body.playerId === "string" ? body.playerId : "",
       body.roomCode,

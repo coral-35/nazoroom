@@ -4,6 +4,8 @@ import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { getNazoroomService } from "@/lib/server/service";
 import { DEFAULT_EVENT_ID } from "@/lib/types/app";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminPage() {
   const service = getNazoroomService();
   const [adminState, dashboard] = await Promise.all([
@@ -16,7 +18,7 @@ export default async function AdminPage() {
       <div className="page-header">
         <div>
           <p className="kicker">管理</p>
-          <h1 className="page-title">MVP 管理用ページ</h1>
+          <h1 className="page-title">ダンジョン管理</h1>
         </div>
         <div className="admin-header-actions">
           <Link href="/admin/problems" className="button button--secondary button--compact">
@@ -28,7 +30,7 @@ export default async function AdminPage() {
         </div>
       </div>
       <section className="panel section-gap">
-        <h2 className="card-title">seed データで確認する</h2>
+          <h2 className="card-title">イベント進行</h2>
         <p className="lead">
           イベント進行ページを直接開き、探索開始、終了、結果発表、リセットを管理します。
         </p>

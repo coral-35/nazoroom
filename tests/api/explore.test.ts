@@ -49,6 +49,21 @@ describe("explore service", () => {
     expect(second.resultType).toBe("show_puzzle");
     expect(state.explorationLogs).toHaveLength(2);
   });
+
+  it("allows room exploration after results are published", async () => {
+    const service = makeService();
+    const joined = await service.joinEvent(DEFAULT_EVENT_ID, "終了後確認");
+    await service.controlEvent(DEFAULT_EVENT_ID, "publish_results");
+
+    const result = await service.explore(
+      DEFAULT_EVENT_ID,
+      joined.player.id,
+      "305"
+    );
+
+    expect(result.resultType).toBe("show_puzzle");
+    expect(result.room?.roomCode).toBe("305");
+  });
 });
 
 function makeService() {

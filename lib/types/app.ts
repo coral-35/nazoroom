@@ -8,11 +8,11 @@ export type EventControlAction =
   | "reset";
 export type ExploreType = "hidden_clue" | "show_puzzle";
 export type ExploreResultType = "not_found" | ExploreType;
-export type UnlockResult =
+export type AnswerResult =
   | "correct"
   | "incorrect"
   | "expired"
-  | "already_unlocked"
+  | "already_cleared"
   | "room_not_found";
 
 export type EventRecord = {
@@ -43,8 +43,6 @@ export type RoomRecord = {
   puzzleText: string | null;
   puzzleImageUrl: string | null;
   hiddenMessage: string | null;
-  treasureName: string;
-  treasureDescription: string | null;
   sortOrder: number;
   isActive: boolean;
   createdAt?: string;
@@ -75,18 +73,16 @@ export type ExplorationLogRecord = {
   createdAt: string;
 };
 
-export type PlayerTreasureRecord = {
+export type PlayerClearRecord = {
   id: string;
   eventId: string;
   playerId: string;
   roomId: string;
   roomCode: string;
-  treasureName: string;
-  treasureDescription: string | null;
-  unlockedAt: string;
+  clearedAt: string;
 };
 
-export type UnlockAttemptRecord = {
+export type AnswerAttemptRecord = {
   id: string;
   eventId: string;
   playerId: string;
@@ -95,7 +91,7 @@ export type UnlockAttemptRecord = {
   normalizedRoomCode: string;
   inputAnswer: string;
   normalizedAnswer: string;
-  result: UnlockResult;
+  result: AnswerResult;
   createdAt: string;
 };
 
@@ -108,19 +104,16 @@ export type ExploredRoomCard = {
   puzzleText?: string;
   puzzleImageUrl?: string;
   createdAt: string;
-  unlocked?: boolean;
+  cleared?: boolean;
 };
 
-export type TreasureItem = {
+export type ClearedRoomItem = {
   roomCode: string;
-  name: string;
-  description: string | null;
-  unlockedAt: string;
+  clearedAt: string;
 };
 
-export type TreasureScore = {
+export type RoomScore = {
   roomCode: string;
-  treasureName: string;
   ownerCount: number;
   score: number;
 };
@@ -129,14 +122,14 @@ export type RankingRow = {
   playerId: string;
   nickname: string;
   score: number;
-  treasureCount: number;
-  lastUnlockedAt: string | null;
-  treasures: string[];
+  clearedRoomCount: number;
+  lastClearedAt: string | null;
+  clearedRooms: string[];
 };
 
 export type RankingResponse = {
   totalPlayers: number;
-  treasureScores: TreasureScore[];
+  roomScores: RoomScore[];
   ranking: RankingRow[];
 };
 
@@ -153,7 +146,7 @@ export type StateResponse = {
   event: PublicEvent;
   player: Pick<PlayerRecord, "id" | "nickname">;
   explorationLogs: ExploredRoomCard[];
-  treasures: TreasureItem[];
+  clearedRooms: ClearedRoomItem[];
   ranking: RankingResponse | null;
 };
 
@@ -165,7 +158,7 @@ export type AdminEventControlResponse = {
 export type AdminDashboardResponse = {
   event: PublicEvent;
   totalPlayers: number;
-  totalUnlocks: number;
+  totalClears: number;
   players: RankingRow[];
 };
 
@@ -187,13 +180,11 @@ export type ExploreResponse = {
   card: ExploredRoomCard | null;
 };
 
-export type UnlockResponse = {
-  result: UnlockResult;
+export type AnswerResponse = {
+  result: AnswerResult;
   message: string;
-  treasure?: {
+  clearedRoom?: {
     roomCode: string;
-    name: string;
-    description: string | null;
-    unlockedAt: string;
+    clearedAt: string;
   };
 };

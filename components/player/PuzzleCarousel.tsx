@@ -45,7 +45,7 @@ export function PuzzleCarousel({ cards, loading }: PuzzleCarouselProps) {
         <div>
           <p className="kicker">探索ログ</p>
           <h2 className="card-title">見つけた部屋</h2>
-          <p className="muted">未解錠の問題を優先して表示します。</p>
+          <p className="muted">未クリアの問題を優先して表示します。</p>
         </div>
         <button
           type="button"

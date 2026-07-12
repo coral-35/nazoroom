@@ -6,7 +6,7 @@ import { CountdownTimer } from "@/components/player/CountdownTimer";
 import { ExplorePanel } from "@/components/player/ExplorePanel";
 import { PuzzleCarousel } from "@/components/player/PuzzleCarousel";
 import { RankingTable } from "@/components/player/RankingTable";
-import { TreasureList } from "@/components/player/TreasureList";
+import { ClearedRoomList } from "@/components/player/ClearedRoomList";
 import { sortExploredRoomCards } from "@/lib/domain/explorationCards";
 import { calculateLocalDeadline, parseLocalStart } from "@/lib/domain/localTimer";
 import type {
@@ -14,8 +14,8 @@ import type {
   ExploreResponse,
   RankingResponse,
   StateResponse,
-  TreasureItem,
-  UnlockResponse
+  ClearedRoomItem,
+  AnswerResponse
 } from "@/lib/types/app";
 
 type PlayerAppProps = {
@@ -38,8 +38,8 @@ export function PlayerApp({
   const [cards, setCards] = useState<ExploredRoomCard[]>(
     sortExploredRoomCards(initialState?.explorationLogs ?? [])
   );
-  const [treasures, setTreasures] = useState<TreasureItem[]>(
-    initialState?.treasures ?? []
+  const [clearedRooms, setClearedRooms] = useState<ClearedRoomItem[]>(
+    initialState?.clearedRooms ?? []
   );
   const [ranking, setRanking] = useState<RankingResponse | null>(
     initialState?.ranking ?? null
@@ -49,7 +49,7 @@ export function PlayerApp({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [loading, setLoading] = useState(!initialState);
   const [exploreBusy, setExploreBusy] = useState(false);
-  const [unlockBusy, setUnlockBusy] = useState(false);
+  const [answerBusy, setAnswerBusy] = useState(false);
   const [localStartAt, setLocalStartAt] = useState<number | null>(null);
   const [timeUp, setTimeUp] = useState(false);
 
@@ -72,7 +72,7 @@ export function PlayerApp({
         const nextState = data as StateResponse;
         setState(nextState);
         setCards(sortExploredRoomCards(nextState.explorationLogs));
-        setTreasures(nextState.treasures);
+        setClearedRooms(nextState.clearedRooms);
         setRanking(nextState.ranking);
         if (nextState.event.status === "ended" || nextState.event.endsAt) {
           setTimeUp(true);
@@ -155,8 +155,9 @@ export function PlayerApp({
   }, [loadState, playerId, state?.event.status]);
 
   const waiting = state?.event.status === "draft";
-  const disabled = loading || timeUp || !state || waiting || !localStartAt;
-  const eventTitle = state?.event.title ?? "宝探しイベント";
+  const exploreDisabled = loading || !state || waiting;
+  const answerDisabled = exploreDisabled || timeUp || !localStartAt;
+  const eventTitle = state?.event.title ?? "謎解きダンジョン";
   const deadlineAt =
     localStartAt && state
       ? calculateLocalDeadline(localStartAt, state.event.durationMinutes)
@@ -201,7 +202,7 @@ export function PlayerApp({
     }
   }
 
-  async function handleUnlock() {
+  async function handleAnswer() {
     if (!playerId) {
       setFeedback("参加情報が確認できません。再参加してください。");
       return;
@@ -215,44 +216,44 @@ export function PlayerApp({
       return;
     }
 
-    setUnlockBusy(true);
+    setAnswerBusy(true);
     setFeedback(null);
     try {
-      const response = await fetch(`${apiBasePath}/unlock`, {
+      const response = await fetch(`${apiBasePath}/answer`, {
         method: "POST",
         headers: {
           "content-type": "application/json"
         },
         body: JSON.stringify({ playerId, roomCode, answer })
       });
-      const data = (await response.json()) as UnlockResponse | { message?: string };
+      const data = (await response.json()) as AnswerResponse | { message?: string };
 
       if (!response.ok) {
-        throw new Error("message" in data ? data.message : "解錠できませんでした。");
+        throw new Error("message" in data ? data.message : "解答を送信できませんでした。");
       }
 
-      const unlocked = data as UnlockResponse;
-      setFeedback(unlocked.message);
+      const result = data as AnswerResponse;
+      setFeedback(result.message);
 
-      if (unlocked.result === "expired") {
+      if (result.result === "expired") {
         setTimeUp(true);
       }
 
-      const unlockedTreasure = unlocked.treasure;
-      if (unlockedTreasure) {
-        setTreasures((current) => upsertTreasure(current, unlockedTreasure));
+      const clearedRoom = result.clearedRoom;
+      if (clearedRoom) {
+        setClearedRooms((current) => upsertClearedRoom(current, clearedRoom));
         setCards((current) =>
           sortExploredRoomCards(
             current.map((card) =>
-              card.roomCode === unlockedTreasure.roomCode
-                ? { ...card, unlocked: true }
+              card.roomCode === clearedRoom.roomCode
+                ? { ...card, cleared: true }
                 : card
             )
           )
         );
       }
 
-      if (unlocked.result === "correct") {
+      if (result.result === "correct") {
         setAnswer("");
       }
     } catch (caught) {
@@ -262,11 +263,11 @@ export function PlayerApp({
           : "通信に失敗しました。時間をおいて再試行してください。"
       );
     } finally {
-      setUnlockBusy(false);
+      setAnswerBusy(false);
     }
   }
 
-  const treasureCount = treasures.length;
+  const clearedRoomCount = clearedRooms.length;
 
   if (!playerId && !loading) {
     return (
@@ -311,7 +312,7 @@ export function PlayerApp({
             <p className="kicker">プレイヤー画面</p>
             <h1 className="card-title">{eventTitle}</h1>
             <p className="muted">
-              {state?.player.nickname ?? "読み込み中"} / 宝 {treasureCount}個
+              {state?.player.nickname ?? "読み込み中"} / クリア {clearedRoomCount}部屋
             </p>
           </div>
           <CountdownTimer
@@ -324,9 +325,17 @@ export function PlayerApp({
         </div>
       </header>
 
+      {ranking ? (
+        <section className="result-ranking">
+          <RankingTable ranking={ranking} />
+        </section>
+      ) : null}
+
       <section className="puzzle-stage">
         <PuzzleCarousel cards={cards} loading={loading} />
       </section>
+
+      <ClearedRoomList clearedRooms={clearedRooms} />
 
       <section className="control-bar">
         <ExplorePanel
@@ -335,50 +344,42 @@ export function PlayerApp({
           onRoomCodeChange={setRoomCode}
           onAnswerChange={setAnswer}
           onExplore={handleExplore}
-          onUnlock={handleUnlock}
+          onAnswer={handleAnswer}
           feedback={feedback}
           exploreBusy={exploreBusy}
-          unlockBusy={unlockBusy}
-          disabled={disabled}
+          answerBusy={answerBusy}
+          exploreDisabled={exploreDisabled}
+          answerDisabled={answerDisabled}
         />
       </section>
 
-      <section className="dashboard-grid">
-        <TreasureList treasures={treasures} />
-        {ranking ? (
-          <RankingTable ranking={ranking} />
-        ) : timeUp ? (
+      {!ranking && timeUp ? (
+        <section className="result-waiting">
           <div className="panel panel--tight">
             <h2 className="card-title">結果発表待ち</h2>
             <p className="lead lead--small">
               探索時間は終了しました。管理者が結果発表を行うとランキングを確認できます。
             </p>
           </div>
-        ) : (
-          <div className="panel panel--tight muted">
-            ランキングは結果発表後に表示されます。
-          </div>
-        )}
-      </section>
+        </section>
+      ) : null}
     </main>
   );
 }
 
-function upsertTreasure(
-  current: TreasureItem[],
-  treasure: NonNullable<UnlockResponse["treasure"]>
-): TreasureItem[] {
-  if (current.some((item) => item.roomCode === treasure.roomCode)) {
+function upsertClearedRoom(
+  current: ClearedRoomItem[],
+  clearedRoom: NonNullable<AnswerResponse["clearedRoom"]>
+): ClearedRoomItem[] {
+  if (current.some((item) => item.roomCode === clearedRoom.roomCode)) {
     return current;
   }
 
   return [
     ...current,
     {
-      roomCode: treasure.roomCode,
-      name: treasure.name,
-      description: treasure.description,
-      unlockedAt: treasure.unlockedAt
+      roomCode: clearedRoom.roomCode,
+      clearedAt: clearedRoom.clearedAt
     }
   ];
 }

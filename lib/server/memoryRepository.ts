@@ -6,14 +6,14 @@ import type {
   EventRecord,
   ExplorationLogRecord,
   PlayerRecord,
-  PlayerTreasureRecord,
+  PlayerClearRecord,
   RoomAnswerRecord,
   RoomRecord,
-  UnlockAttemptRecord
+  AnswerAttemptRecord
 } from "@/lib/types/app";
 import {
   buildExploredRoomCard,
-  type CreateTreasureInput,
+  type CreateClearInput,
   type NazoroomRepository,
   type UpdateEventInput,
   type UpsertRoomInput
@@ -25,8 +25,8 @@ export type MemoryState = {
   rooms: RoomRecord[];
   roomAnswers: RoomAnswerRecord[];
   explorationLogs: ExplorationLogRecord[];
-  playerTreasures: PlayerTreasureRecord[];
-  unlockAttempts: UnlockAttemptRecord[];
+  playerClears: PlayerClearRecord[];
+  answerAttempts: AnswerAttemptRecord[];
 };
 
 type MemoryRepositoryOptions = {
@@ -45,7 +45,7 @@ export function createSeedMemoryState(now: Date = new Date()): MemoryState {
     events: [
       {
         id: DEFAULT_EVENT_ID,
-        title: "MVPテスト宝探し",
+        title: "謎解きダンジョン",
         status: "active",
         startsAt,
         endsAt: null,
@@ -66,8 +66,6 @@ export function createSeedMemoryState(now: Date = new Date()): MemoryState {
         puzzleText: "時計の針が示す言葉を読め。",
         puzzleImageUrl: null,
         hiddenMessage: null,
-        treasureName: "月の鍵",
-        treasureDescription: "淡く光る銀色の鍵。",
         sortOrder: 1,
         isActive: true,
         createdAt,
@@ -83,8 +81,6 @@ export function createSeedMemoryState(now: Date = new Date()): MemoryState {
         puzzleText: null,
         puzzleImageUrl: null,
         hiddenMessage: "部屋204の周囲に、画面には映らない違和感がある。",
-        treasureName: "星の鍵",
-        treasureDescription: "小さな星形の鍵。",
         sortOrder: 2,
         isActive: true,
         createdAt,
@@ -100,8 +96,6 @@ export function createSeedMemoryState(now: Date = new Date()): MemoryState {
         puzzleText: "封筒に描かれた線を順にたどれ。",
         puzzleImageUrl: null,
         hiddenMessage: null,
-        treasureName: "太陽の鍵",
-        treasureDescription: "あたたかく光る金色の鍵。",
         sortOrder: 3,
         isActive: true,
         createdAt,
@@ -114,8 +108,8 @@ export function createSeedMemoryState(now: Date = new Date()): MemoryState {
       createAnswer(ROOM_A01_ID, "たいよう", "たいよう", createdAt)
     ],
     explorationLogs: [],
-    playerTreasures: [],
-    unlockAttempts: []
+    playerClears: [],
+    answerAttempts: []
   };
 }
 
@@ -144,10 +138,10 @@ export function createMemoryRepository(
       state.explorationLogs = state.explorationLogs.filter(
         (log) => log.eventId !== input.eventId
       );
-      state.playerTreasures = state.playerTreasures.filter(
-        (treasure) => treasure.eventId !== input.eventId
+      state.playerClears = state.playerClears.filter(
+        (clear) => clear.eventId !== input.eventId
       );
-      state.unlockAttempts = state.unlockAttempts.filter(
+      state.answerAttempts = state.answerAttempts.filter(
         (attempt) => attempt.eventId !== input.eventId
       );
       const event = updateMemoryEvent(input);
@@ -210,13 +204,13 @@ export function createMemoryRepository(
 
     async listExplorationCards(eventId, playerId) {
       readLatest();
-      const unlockedRoomIds = new Set(
-        state.playerTreasures
+      const clearedRoomIds = new Set(
+        state.playerClears
           .filter(
-            (treasure) =>
-              treasure.eventId === eventId && treasure.playerId === playerId
+            (clear) =>
+              clear.eventId === eventId && clear.playerId === playerId
           )
-          .map((treasure) => treasure.roomId)
+          .map((clear) => clear.roomId)
       );
 
       const cards = state.explorationLogs
@@ -228,23 +222,23 @@ export function createMemoryRepository(
           buildExploredRoomCard({
             log,
             room: state.rooms.find((room) => room.id === log.roomId) ?? null,
-            unlocked: log.roomId ? unlockedRoomIds.has(log.roomId) : false
+            cleared: log.roomId ? clearedRoomIds.has(log.roomId) : false
           })
         );
 
       return sortExploredRoomCards(cards);
     },
 
-    async listPlayerTreasures(eventId, playerId) {
+    async listPlayerClears(eventId, playerId) {
       readLatest();
-      return state.playerTreasures
+      return state.playerClears
         .filter(
-          (treasure) =>
-            treasure.eventId === eventId && treasure.playerId === playerId
+          (clear) =>
+            clear.eventId === eventId && clear.playerId === playerId
         )
         .sort(
           (a, b) =>
-            new Date(a.unlockedAt).getTime() - new Date(b.unlockedAt).getTime()
+            new Date(a.clearedAt).getTime() - new Date(b.clearedAt).getTime()
         );
     },
 
@@ -255,45 +249,45 @@ export function createMemoryRepository(
         .map((answer) => ({ normalizedAnswer: answer.normalizedAnswer }));
     },
 
-    async createUnlockAttempt(input) {
+    async createAnswerAttempt(input) {
       readLatest();
-      const attempt: UnlockAttemptRecord = {
+      const attempt: AnswerAttemptRecord = {
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
         ...input
       };
-      state.unlockAttempts.push(attempt);
+      state.answerAttempts.push(attempt);
       persist();
       return attempt;
     },
 
-    async getPlayerTreasure(eventId, playerId, roomId) {
+    async getPlayerClear(eventId, playerId, roomId) {
       readLatest();
       return (
-        state.playerTreasures.find(
-          (treasure) =>
-            treasure.eventId === eventId &&
-            treasure.playerId === playerId &&
-            treasure.roomId === roomId
+        state.playerClears.find(
+          (clear) =>
+            clear.eventId === eventId &&
+            clear.playerId === playerId &&
+            clear.roomId === roomId
         ) ?? null
       );
     },
 
-    async createPlayerTreasureIdempotent(input) {
+    async createPlayerClearIdempotent(input) {
       readLatest();
-      const existing = await this.getPlayerTreasure(
+      const existing = await this.getPlayerClear(
         input.eventId,
         input.playerId,
         input.room.id
       );
       if (existing) {
-        return { treasure: existing, created: false };
+        return { clearedRoom: existing, created: false };
       }
 
-      const treasure = makeTreasure(input);
-      state.playerTreasures.push(treasure);
+      const clearedRoom = makeClear(input);
+      state.playerClears.push(clearedRoom);
       persist();
-      return { treasure, created: true };
+      return { clearedRoom, created: true };
     },
 
     async listPlayers(eventId) {
@@ -334,11 +328,11 @@ export function createMemoryRepository(
       return buildAdminRoom(room);
     },
 
-    async listAllTreasures(eventId) {
+    async listAllClears(eventId) {
       readLatest();
-      return state.playerTreasures
-        .filter((treasure) => treasure.eventId === eventId)
-        .sort((a, b) => a.unlockedAt.localeCompare(b.unlockedAt));
+      return state.playerClears
+        .filter((clear) => clear.eventId === eventId)
+        .sort((a, b) => a.clearedAt.localeCompare(b.clearedAt));
     }
   };
 
@@ -396,8 +390,6 @@ export function createMemoryRepository(
         puzzleText: input.puzzleText,
         puzzleImageUrl: input.puzzleImageUrl,
         hiddenMessage: input.hiddenMessage,
-        treasureName: input.treasureName,
-        treasureDescription: input.treasureDescription,
         sortOrder: input.sortOrder,
         isActive: input.isActive,
         updatedAt: now
@@ -416,8 +408,6 @@ export function createMemoryRepository(
       puzzleText: input.puzzleText,
       puzzleImageUrl: input.puzzleImageUrl,
       hiddenMessage: input.hiddenMessage,
-      treasureName: input.treasureName,
-      treasureDescription: input.treasureDescription,
       sortOrder: input.sortOrder,
       isActive: input.isActive,
       createdAt: now,
@@ -467,15 +457,13 @@ function createAnswer(
   };
 }
 
-function makeTreasure(input: CreateTreasureInput): PlayerTreasureRecord {
+function makeClear(input: CreateClearInput): PlayerClearRecord {
   return {
     id: crypto.randomUUID(),
     eventId: input.eventId,
     playerId: input.playerId,
     roomId: input.room.id,
     roomCode: input.room.roomCode,
-    treasureName: input.room.treasureName,
-    treasureDescription: input.room.treasureDescription,
-    unlockedAt: new Date().toISOString()
+    clearedAt: new Date().toISOString()
   };
 }
