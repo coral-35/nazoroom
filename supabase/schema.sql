@@ -64,7 +64,8 @@ create table if not exists public.exploration_logs (
   normalized_room_code text not null,
   result_type text not null check (result_type in ('not_found', 'hidden_clue', 'show_puzzle')),
   message text not null,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  unique (player_id, room_id)
 );
 
 create table if not exists public.player_cleared_rooms (

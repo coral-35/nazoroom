@@ -170,6 +170,7 @@ export type AdminRoomsResponse = {
 export type ExploreResponse = {
   resultType: ExploreResultType;
   message: string;
+  alreadyExplored: boolean;
   room: null | {
     roomCode: string;
     title: string | null;

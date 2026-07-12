@@ -242,12 +242,13 @@ export function createNazoroomService(
         return {
           resultType: "not_found",
           message,
+          alreadyExplored: false,
           room: null,
           card: null
         };
       }
 
-      const log = await repository.createExplorationLog({
+      const { log, created } = await repository.createExplorationLogIdempotent({
         eventId,
         playerId,
         roomId: room.id,
@@ -262,7 +263,8 @@ export function createNazoroomService(
 
       return {
         resultType: card.resultType,
-        message,
+        message: created ? message : `部屋 ${room.roomCode} は探索済みです。`,
+        alreadyExplored: !created,
         room: publicRoomForExplore(room),
         card
       };

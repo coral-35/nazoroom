@@ -75,7 +75,9 @@ export type NazoroomRepository = {
     eventId: string,
     normalizedRoomCode: string
   ): Promise<RoomRecord | null>;
-  createExplorationLog(input: CreateExplorationLogInput): Promise<ExplorationLogRecord>;
+  createExplorationLogIdempotent(
+    input: CreateExplorationLogInput
+  ): Promise<{ log: ExplorationLogRecord; created: boolean }>;
   listExplorationCards(eventId: string, playerId: string): Promise<ExploredRoomCard[]>;
   listPlayerClears(eventId: string, playerId: string): Promise<PlayerClearRecord[]>;
   listRoomAnswers(roomId: string): Promise<Pick<RoomAnswerRecord, "normalizedAnswer">[]>;

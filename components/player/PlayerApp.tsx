@@ -188,7 +188,11 @@ export function PlayerApp({
       const explored = data as ExploreResponse;
       const exploredCard = explored.card;
       if (exploredCard) {
-        setCards((current) => sortExploredRoomCards([...current, exploredCard]));
+        setCards((current) =>
+          current.some((card) => card.logId === exploredCard.logId)
+            ? current
+            : sortExploredRoomCards([...current, exploredCard])
+        );
       }
       setFeedback(explored.message);
     } catch (caught) {

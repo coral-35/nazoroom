@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { PuzzleCard } from "@/components/player/PuzzleCard";
 import type { ExploredRoomCard } from "@/lib/types/app";
 
@@ -11,13 +11,6 @@ type PuzzleCarouselProps = {
 
 export function PuzzleCarousel({ cards, loading }: PuzzleCarouselProps) {
   const rowRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    rowRef.current?.scrollTo({
-      left: 0,
-      behavior: "smooth"
-    });
-  }, [cards]);
 
   if (loading) {
     return (

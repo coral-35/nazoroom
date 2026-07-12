@@ -110,7 +110,17 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
       return data ? mapRoom(data) : null;
     },
 
-    async createExplorationLog(input) {
+    async createExplorationLogIdempotent(input) {
+      const existing = await getExplorationLogByRoom(
+        client,
+        input.eventId,
+        input.playerId,
+        input.roomId
+      );
+      if (existing) {
+        return { log: existing, created: false };
+      }
+
       const { data, error } = await client
         .from("exploration_logs")
         .insert({
@@ -126,10 +136,21 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
         .single();
 
       if (error) {
+        if (error.code === "23505") {
+          const concurrent = await getExplorationLogByRoom(
+            client,
+            input.eventId,
+            input.playerId,
+            input.roomId
+          );
+          if (concurrent) {
+            return { log: concurrent, created: false };
+          }
+        }
         throw error;
       }
 
-      return mapExplorationLog(data);
+      return { log: mapExplorationLog(data), created: true };
     },
 
     async listExplorationCards(eventId, playerId) {
@@ -342,6 +363,31 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
       return (data ?? []).map(mapPlayerClear);
     }
   };
+}
+
+async function getExplorationLogByRoom(
+  client: SupabaseClient,
+  eventId: string,
+  playerId: string,
+  roomId: string | null
+) {
+  if (!roomId) {
+    return null;
+  }
+
+  const { data, error } = await client
+    .from("exploration_logs")
+    .select("*")
+    .eq("event_id", eventId)
+    .eq("player_id", playerId)
+    .eq("room_id", roomId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ? mapExplorationLog(data) : null;
 }
 
 async function updateEventRow(client: SupabaseClient, input: UpdateEventInput) {

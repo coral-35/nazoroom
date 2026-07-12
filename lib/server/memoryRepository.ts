@@ -190,8 +190,18 @@ export function createMemoryRepository(
       );
     },
 
-    async createExplorationLog(input) {
+    async createExplorationLogIdempotent(input) {
       readLatest();
+      const existing = state.explorationLogs.find(
+        (log) =>
+          log.playerId === input.playerId &&
+          log.roomId !== null &&
+          log.roomId === input.roomId
+      );
+      if (existing) {
+        return { log: existing, created: false };
+      }
+
       const log: ExplorationLogRecord = {
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
@@ -199,7 +209,7 @@ export function createMemoryRepository(
       };
       state.explorationLogs.push(log);
       persist();
-      return log;
+      return { log, created: true };
     },
 
     async listExplorationCards(eventId, playerId) {

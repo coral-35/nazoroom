@@ -36,7 +36,7 @@ describe("explore service", () => {
     expect(result.card?.puzzleText).toBeUndefined();
   });
 
-  it("returns visible puzzle cards and keeps repeated exploration logs", async () => {
+  it("detects an already explored room without duplicating its log", async () => {
     const service = makeService();
     const joined = await service.joinEvent(DEFAULT_EVENT_ID, "テスト太郎");
 
@@ -46,8 +46,10 @@ describe("explore service", () => {
 
     expect(first.resultType).toBe("show_puzzle");
     expect(first.room?.puzzleText).toBe("時計の針が示す言葉を読め。");
-    expect(second.resultType).toBe("show_puzzle");
-    expect(state.explorationLogs).toHaveLength(2);
+    expect(first.alreadyExplored).toBe(false);
+    expect(second.alreadyExplored).toBe(true);
+    expect(second.message).toContain("探索済み");
+    expect(state.explorationLogs).toHaveLength(1);
   });
 
   it("allows room exploration after results are published", async () => {
