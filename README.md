@@ -10,12 +10,12 @@
 - Next.js Route Handlers
 - CSSフレームワークなしのグローバルCSS
 
-`../nazoapp` と比較し、アプリ本体のスタックは Next.js / React / TypeScript / Supabase / 通常CSS に寄せています。
+`../quiz` と比較し、アプリ本体のスタックは Next.js / React / TypeScript / Supabase / 通常CSS に寄せています。
 Tailwind CSS / PostCSS / Prisma / 独自バックエンドサーバーは使いません。ESLint、Vitest、Playwright は品質確認用の開発ツールとして残しています。
 
 ## ローカルSupabase
 
-NazoRoom は2つ目のアプリとして、`../nazoapp` と同時起動できるように Supabase と Next.js のポートを分けています。
+NazoRoom は2つ目のアプリとして、`../quiz` と同時起動できるように Supabase と Next.js のポートを分けています。Supabase CLIのコマンドは、必ずこの `room` ディレクトリで実行します。
 
 | 用途 | ポート | URL |
 |---|---:|---|
@@ -43,14 +43,19 @@ NEXT_PUBLIC_APP_URL=http://localhost:3001
 ```bash
 npm install
 npx supabase start
-npx supabase status
-npx supabase db reset
+npx supabase status  # 状態やキーを確認するときだけ
 npm run dev
 ```
 
 アプリは `http://localhost:3001`、Supabase Studio は `http://127.0.0.1:55323` で開きます。
 
 `npx supabase status` の `anon key` と `service_role key` を `room/.env.local` に反映してから `npm run dev` を起動してください。
+
+終了するときは `npx supabase stop` を実行します。通常起動ではDBを毎回resetしません。
+
+`npx supabase db reset --local` は、ローカルDB内のデータを削除し、`supabase/migrations/*.sql` と `supabase/seed.sql` から再構築する必要があるときだけ使用します。リモートDBを消去し得る `--linked` は使用しません。
+
+`quiz` を含む全体の起動順、ポート、リセット判断は [../SUPABASE.md](../SUPABASE.md) を参照してください。
 
 開発用のテストイベントは固定の1件です。通常操作ではイベントIDを入力せず、短いURLを使います。
 
@@ -85,7 +90,7 @@ http://localhost:3001/results
 DB変更は `supabase/migrations/*.sql` に追加し、新規環境の全体像は `supabase/schema.sql` に追従させます。
 
 ```bash
-npx supabase db reset
+npx supabase db reset --local
 ```
 
 重要データへのアクセスは Route Handler 側に寄せています。`room_answers` はクライアントに返さず、解答判定もサーバー側で行います。
