@@ -27,9 +27,10 @@ export function ExplorePanel({
   exploreDisabled,
   answerDisabled
 }: ExplorePanelProps) {
-  const isExploreDisabled = exploreDisabled || exploreBusy || !roomCode.trim();
+  const validRoomCode = /^[0-9]{1,6}$/.test(roomCode);
+  const isExploreDisabled = exploreDisabled || exploreBusy || !validRoomCode;
   const isAnswerDisabled =
-    answerDisabled || answerBusy || !roomCode.trim() || !answer.trim();
+    answerDisabled || answerBusy || !validRoomCode || !answer.trim();
 
   return (
     <div className="explore-panel">
@@ -40,11 +41,15 @@ export function ExplorePanel({
         <input
           id="room-code"
           value={roomCode}
-          onChange={(event) => onRoomCodeChange(event.target.value)}
+          onChange={(event) => {
+            const value = event.target.value.normalize("NFKC");
+            if (/^[0-9]*$/.test(value)) onRoomCodeChange(value.slice(0, 6));
+          }}
           className="input"
-          placeholder="305"
-          inputMode="text"
-          autoCapitalize="characters"
+          placeholder="部屋番号を入力"
+          inputMode="numeric"
+          pattern="[0-9]{1,6}"
+          maxLength={6}
         />
         <button
           type="button"
@@ -64,7 +69,7 @@ export function ExplorePanel({
           value={answer}
           onChange={(event) => onAnswerChange(event.target.value)}
           className="input"
-          placeholder="ひかり"
+          placeholder="解答を入力"
           inputMode="text"
         />
         <button

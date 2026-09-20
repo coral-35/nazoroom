@@ -273,6 +273,8 @@ export function PlayerApp({
   }
 
   const clearedRoomCount = clearedRooms.length;
+  const myRankIndex = ranking?.ranking.findIndex((row) => row.playerId === playerId) ?? -1;
+  const myResult = myRankIndex >= 0 ? ranking?.ranking[myRankIndex] : null;
 
   if (!playerId && !loading) {
     return (
@@ -312,28 +314,32 @@ export function PlayerApp({
   return (
     <main className="play-shell">
       <header className="player-header">
-        <div className="player-header-row">
+        <div className={`player-header-row${ranking ? " player-header-row--results" : ""}`}>
           <div>
             <h1 className="card-title">{eventTitle}</h1>
             <p className="muted">
               {state?.player.nickname ?? "読み込み中"} / 宝 {clearedRoomCount}個
             </p>
           </div>
-          <CountdownTimer
-            status={state?.event.status}
-            deadlineAt={deadlineAt}
-            onExpire={() => {
-              setTimeUp(true);
-            }}
-          />
+          <div className="player-metrics">
+            {ranking ? (
+              <div className="personal-result" aria-label="自分の結果">
+                <p className="timer-label">結果</p>
+                <p className="personal-result-value">
+                  {myResult ? `${myResult.score}点 / ${myRankIndex + 1}位` : "集計中"}
+                </p>
+              </div>
+            ) : null}
+            <CountdownTimer
+              status={state?.event.status}
+              deadlineAt={deadlineAt}
+              onExpire={() => {
+                setTimeUp(true);
+              }}
+            />
+          </div>
         </div>
       </header>
-
-      {ranking ? (
-        <section className="result-ranking">
-          <RankingTable ranking={ranking} />
-        </section>
-      ) : null}
 
       <section className="control-bar">
         <ExplorePanel
@@ -365,6 +371,12 @@ export function PlayerApp({
               探索時間は終了しました。管理者が結果発表を行うとランキングを確認できます。
             </p>
           </div>
+        </section>
+      ) : null}
+
+      {ranking ? (
+        <section className="result-ranking">
+          <RankingTable ranking={ranking} />
         </section>
       ) : null}
     </main>

@@ -727,11 +727,14 @@ img {
 
 .treasure-panel {
   padding: 12px;
+  border: 0;
+  box-shadow: none;
 }
 
 .treasure-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-rows: repeat(6, 38px);
   gap: 6px;
   margin-top: 10px;
 }
@@ -740,17 +743,12 @@ img {
   display: grid;
   place-items: center;
   min-height: 38px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
   color: var(--accent-strong);
   font-weight: 800;
 }
 
-.treasure-slot[data-acquired="true"] {
-  background: #e9f6f2;
-}
-
 .treasure-secret {
+  grid-row: 6;
   grid-column: 3;
 }
 
@@ -769,4 +767,43 @@ img {
 .compact-puzzle .puzzle-image {
   max-height: 180px;
   margin-top: 6px;
+}
+
+.input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.player-metrics {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.personal-result {
+  padding: 8px 10px;
+  text-align: right;
+}
+
+.personal-result-value {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+@media (max-width: 540px) {
+  .player-header-row--results {
+    flex-wrap: wrap;
+  }
+
+  .player-header-row--results .player-metrics {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .explore-row .input {
+    padding-inline: 8px;
+  }
 }

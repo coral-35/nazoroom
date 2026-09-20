@@ -1,6 +1,6 @@
 import { normalizeRoomCode } from "@/lib/domain/normalize";
 
-const ROOM_CODE_PATTERN = /^[A-Z0-9_-]+$/;
+const ROOM_CODE_PATTERN = /^[0-9]{1,6}$/;
 
 export function parseNickname(input: unknown): string {
   if (typeof input !== "string") {
@@ -28,7 +28,7 @@ export function parseRoomCode(input: unknown): string {
     throw new ValidationError("部屋番号を入力してください。");
   }
   if (!ROOM_CODE_PATTERN.test(normalizedRoomCode)) {
-    throw new ValidationError("部屋番号は英数字、ハイフン、アンダースコアで入力してください。");
+    throw new ValidationError("部屋番号は1〜6桁の数字で入力してください。");
   }
 
   return input.trim();

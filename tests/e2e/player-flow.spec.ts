@@ -73,9 +73,9 @@ test("player can explore, answer, and avoid duplicate clears", async ({ page }) 
 
   const rankingBox = await rankingTitle.boundingBox();
   const explorationBox = await explorationTitle.boundingBox();
-  expect(rankingBox?.y).toBeLessThan(explorationBox?.y ?? 0);
+  expect(rankingBox?.y).toBeGreaterThan(explorationBox?.y ?? 0);
 
-  await page.getByLabel("部屋番号").fill("A-01");
+  await page.getByLabel("部屋番号").fill("204");
   await page.getByRole("button", { name: "探索" }).click();
-  await expect(page.getByText("封筒に描かれた線を順にたどれ。")).toBeVisible();
+  await expect(page.locator(".explore-feedback")).toContainText("204");
 });
