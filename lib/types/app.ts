@@ -58,6 +58,7 @@ export type ProblemBankRecord = {
   title: string | null;
   puzzleImageUrl: string;
   defaultAnswers: string[];
+  isReserve: boolean;
   createdAt?: string;
   updatedAt?: string;
 };

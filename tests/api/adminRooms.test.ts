@@ -110,6 +110,34 @@ describe("admin room service", () => {
     expect(answered.result).toBe("correct");
     expect(answered.clearedRoom?.treasureName).toBe("宝D");
   });
+
+  it("keeps the reserve problem visible to admins but inactive at runtime", async () => {
+    const service = makeService();
+    const initial = await service.listAdminRooms(DEFAULT_EVENT_ID);
+    const reserve = initial.problems.find((item) => item.problemNumber === 27);
+    expect(reserve?.isReserve).toBe(true);
+
+    await service.saveAdminRoom(DEFAULT_EVENT_ID, {
+      problemId: reserve?.id,
+      roomCode: "27",
+      exploreType: "show_puzzle",
+      title: "予備",
+      puzzleText: "",
+      puzzleImageUrl: "",
+      hiddenMessage: "",
+      sortOrder: 27,
+      isActive: true,
+      answers: ["予備答え"]
+    });
+
+    const afterSave = await service.listAdminRooms(DEFAULT_EVENT_ID);
+    const reserveRoom = afterSave.rooms.find((item) => item.problemId === reserve?.id);
+    const joined = await service.joinEvent(DEFAULT_EVENT_ID, "予備確認");
+    const explored = await service.explore(DEFAULT_EVENT_ID, joined.player.id, "27");
+
+    expect(reserveRoom?.isActive).toBe(false);
+    expect(explored.resultType).toBe("not_found");
+  });
 });
 
 function makeService() {

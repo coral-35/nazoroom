@@ -166,7 +166,8 @@ export function createNazoroomService(
             title: selectedProblem.title,
             puzzleText: null,
             puzzleImageUrl: selectedProblem.puzzleImageUrl,
-            hiddenMessage: null
+            hiddenMessage: null,
+            isActive: selectedProblem.isReserve ? false : input.isActive
           }
         : input;
       const duplicate = rooms.find(

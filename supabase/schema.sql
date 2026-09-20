@@ -37,6 +37,7 @@ create table if not exists public.problem_bank (
   title text,
   puzzle_image_url text not null,
   default_answers text[] not null default '{}',
+  is_reserve boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

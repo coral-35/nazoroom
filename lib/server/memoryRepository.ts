@@ -435,7 +435,7 @@ export function createMemoryRepository(
       puzzleImageUrl: input.puzzleImageUrl,
       hiddenMessage: input.hiddenMessage,
       sortOrder: input.sortOrder,
-      isActive: input.isActive,
+        isActive: input.isActive,
       createdAt: now,
       updatedAt: now
     };
@@ -498,6 +498,7 @@ function createProblem(
     title,
     puzzleImageUrl,
     defaultAnswers,
+    isReserve: problemNumber === 27,
     createdAt,
     updatedAt: createdAt
   };

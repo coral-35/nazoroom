@@ -145,24 +145,28 @@ type RoomFormProps = {
 };
 
 function RoomForm({ title, room, busy, problems, onChange, onSave }: RoomFormProps) {
+  const selectedProblem = problems.find((problem) => problem.id === room.problemId);
+  const isReserve = selectedProblem?.isReserve === true;
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onSave(room);
+    onSave(isReserve ? { ...room, isActive: false } : room);
   }
 
   return (
     <form className="admin-room-card" onSubmit={handleSubmit}>
       <div className="card-header">
         <div>
-          <p className="kicker">{room.isActive ? "公開中" : "無効"}</p>
+          <p className="kicker">{isReserve ? "予備" : room.isActive ? "公開中" : "無効"}</p>
           <h3 className="card-title">
-            {title} / {treasureLabel(room.sortOrder)}
+            {title} / {isReserve ? "宝未割当" : treasureLabel(room.sortOrder)}
           </h3>
         </div>
         <label className="checkbox-field">
           <input
             type="checkbox"
-            checked={room.isActive}
+            checked={!isReserve && room.isActive}
+            disabled={isReserve}
             onChange={(event) => onChange({ isActive: event.target.checked })}
           />
           有効
@@ -186,6 +190,7 @@ function RoomForm({ title, room, busy, problems, onChange, onSave }: RoomFormPro
                       puzzleText: "",
                       puzzleImageUrl: problem.puzzleImageUrl,
                       hiddenMessage: "",
+                      isActive: !problem.isReserve,
                       answersText: problem.defaultAnswers.join("\n")
                     }
                   : { problemId: "" }
@@ -197,6 +202,7 @@ function RoomForm({ title, room, busy, problems, onChange, onSave }: RoomFormPro
             {problems.map((problem) => (
               <option key={problem.id} value={problem.id}>
                 {problem.problemNumber}. 部屋 {problem.roomCode}
+                {problem.isReserve ? "（予備）" : ""}
               </option>
             ))}
           </select>

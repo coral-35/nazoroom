@@ -544,6 +544,7 @@ function mapProblemBank(row: any): ProblemBankRecord {
     title: row.title,
     puzzleImageUrl: row.puzzle_image_url,
     defaultAnswers: Array.isArray(row.default_answers) ? row.default_answers : [],
+    isReserve: row.is_reserve === true,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
