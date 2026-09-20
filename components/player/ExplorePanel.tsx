@@ -34,12 +34,9 @@ export function ExplorePanel({
 
   return (
     <div className="explore-panel">
-      <fieldset className="action-group">
-        <legend>探索 <span>部屋番号のみ</span></legend>
-        <div className="explore-row">
-          <label htmlFor="room-code" className="explore-label">
-            部屋番号
-          </label>
+      <div className="input-flow">
+        <label htmlFor="room-code" className="flow-field flow-field--room">
+          <span>部屋番号</span>
           <input
             id="room-code"
             value={roomCode}
@@ -53,44 +50,45 @@ export function ExplorePanel({
             pattern="[0-9]{1,6}"
             maxLength={6}
           />
-          <button
-            type="button"
-            onClick={onExplore}
-            disabled={isExploreDisabled}
-            className="button button--primary button--compact"
-          >
-            {exploreBusy ? "探索中" : "探索"}
-          </button>
-        </div>
-      </fieldset>
-      <fieldset className="action-group">
-        <legend>解答 <span>部屋番号＋解答</span></legend>
-        <p id="answer-target" className="answer-target" aria-live="polite">
-          {validRoomCode ? `解答先：部屋 ${roomCode}（上の部屋番号）` : "解答先：上の部屋番号を入力してください"}
-        </p>
-        <div className="explore-row">
-          <label htmlFor="answer" className="explore-label">
-            解答
-          </label>
+        </label>
+        <svg className="flow-connections" viewBox="0 0 36 168" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+          <path className="flow-to-answer" d="M 10 50 V 144 H 33 M 0 144 H 33 M 28 139 L 33 144 L 28 149" />
+          <path className="flow-to-explore" d="M 0 50 H 33 M 28 45 L 33 50 L 28 55" />
+          <circle cx="10" cy="50" r="3" className="flow-room-junction" />
+          <circle cx="10" cy="144" r="3" className="flow-answer-junction" />
+        </svg>
+        <button
+          type="button"
+          onClick={onExplore}
+          disabled={isExploreDisabled}
+          aria-describedby="explore-inputs"
+          className="button button--compact flow-explore"
+        >
+          {exploreBusy ? "探索中" : "探索"}
+        </button>
+        <label htmlFor="answer" className="flow-field flow-field--answer">
+          <span>解答</span>
           <input
             id="answer"
-            aria-describedby="answer-target"
             value={answer}
             onChange={(event) => onAnswerChange(event.target.value)}
             className="input"
             placeholder="解答を入力"
             inputMode="text"
           />
-          <button
-            type="button"
-            onClick={onAnswer}
-            disabled={isAnswerDisabled}
-            className="button button--dark button--compact"
-          >
-            {answerBusy ? "解答中" : "解答"}
-          </button>
-        </div>
-      </fieldset>
+        </label>
+        <button
+          type="button"
+          onClick={onAnswer}
+          disabled={isAnswerDisabled}
+          aria-describedby="answer-inputs"
+          className="button button--compact flow-answer"
+        >
+          {answerBusy ? "解答中" : "解答"}
+        </button>
+        <span id="explore-inputs" className="visually-hidden">部屋番号のみを送信</span>
+        <span id="answer-inputs" className="visually-hidden">部屋番号と解答を送信</span>
+      </div>
       {feedback ? (
         <p className="message message--notice explore-feedback">
           {feedback}

@@ -798,41 +798,87 @@ img {
   text-align: center;
 }
 
-.action-group {
-  min-width: 0;
-  margin: 0;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 8px;
+.input-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px 72px;
+  grid-template-rows: 74px 74px;
+  row-gap: 20px;
 }
 
-.action-group legend {
-  padding: 0 4px;
+.flow-field {
+  display: grid;
+  grid-template-rows: 20px 48px;
+  gap: 6px;
+  min-width: 0;
   font-size: 0.85rem;
   font-weight: 800;
 }
 
-.action-group legend span {
-  margin-left: 6px;
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 500;
-}
-
-.answer-target {
-  margin: 0 0 6px;
+.flow-field--room {
+  grid-area: 1 / 1;
   color: var(--accent-strong);
-  font-size: 0.8rem;
 }
 
-.action-group .explore-row {
-  grid-template-columns: 3.5rem minmax(0, 1fr) 3rem;
+.flow-field--room .input {
+  border-color: #70b9a7;
+  background: #effaf5;
 }
 
-.action-group .input::placeholder {
-  font-size: 0.8rem;
+.flow-field--answer {
+  grid-area: 2 / 1;
+  color: #6650a3;
 }
 
-.action-group .button--compact {
-  padding-inline: 4px;
+.flow-field--answer .input {
+  border-color: #b7a4db;
+  background: #f6f2fc;
+}
+
+.flow-connections {
+  grid-area: 1 / 2 / 3 / 3;
+  width: 36px;
+  height: 168px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.flow-connections path {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.flow-to-explore { stroke: var(--accent); }
+.flow-to-answer { stroke: #8065b5; }
+.flow-room-junction { fill: var(--accent); }
+.flow-answer-junction { fill: #8065b5; }
+
+.input-flow .button {
+  height: 48px;
+  align-self: end;
+  padding-inline: 8px;
+  color: #fff;
+}
+
+.flow-explore {
+  grid-area: 1 / 3;
+  background: var(--accent);
+}
+
+.flow-answer {
+  grid-area: 2 / 3;
+  background: #7153a8;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }

@@ -35,8 +35,10 @@ test("compact collection stays below inputs and reveals acquired Z", async ({ pa
     await expect(page.locator(".treasure-slot").first()).toHaveCSS("border-top-width", "0px");
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   }
-  await expect(page.getByRole("group", { name: "探索 部屋番号のみ" })).toBeVisible();
-  await expect(page.getByRole("group", { name: "解答 部屋番号＋解答" })).toBeVisible();
+  await expect(page.locator(".flow-connections")).toBeVisible();
+  await expect(page.getByRole("button", { name: "探索", exact: true })).toHaveAccessibleDescription("部屋番号のみを送信");
+  await expect(page.getByRole("button", { name: "解答", exact: true })).toHaveAccessibleDescription("部屋番号と解答を送信");
+  await expect(page.getByText("部屋番号＋解答", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "探索", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "解答", exact: true })).toBeDisabled();
   const roomInput = page.getByPlaceholder("部屋番号を入力");
@@ -47,7 +49,6 @@ test("compact collection stays below inputs and reveals acquired Z", async ({ pa
   await roomInput.pressSequentially("ab-12");
   await expect(roomInput).toHaveValue("12");
   await roomInput.fill("123456");
-  await expect(page.getByText("解答先：部屋 123456（上の部屋番号）", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "探索", exact: true })).toBeEnabled();
   await expect(page.getByRole("button", { name: "解答", exact: true })).toBeDisabled();
   await page.getByLabel("解答", { exact: true }).fill("answer");
