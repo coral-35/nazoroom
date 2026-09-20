@@ -331,6 +331,7 @@ export function PlayerApp({
             ) : null}
             <CountdownTimer
               status={state?.event.status}
+              startAt={localStartAt}
               deadlineAt={deadlineAt}
               onExpire={() => {
                 setTimeUp(true);

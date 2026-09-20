@@ -51,18 +51,17 @@ export function ExplorePanel({
             maxLength={6}
           />
         </label>
-        <svg className="flow-connections" viewBox="0 0 36 168" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-          <path className="flow-to-answer" d="M 10 50 V 144 H 33 M 0 144 H 33 M 28 139 L 33 144 L 28 149" />
-          <path className="flow-to-explore" d="M 0 50 H 33 M 28 45 L 33 50 L 28 55" />
-          <circle cx="10" cy="50" r="3" className="flow-room-junction" />
-          <circle cx="10" cy="144" r="3" className="flow-answer-junction" />
+        <svg className="flow-connections" viewBox="0 0 32 104" aria-hidden="true" focusable="false">
+          <path d="M 1 24 H 29 M 24 19 L 29 24 L 24 29" />
+          <path d="M 1 29 L 29 70 M 22 67 L 29 70 L 28 62" />
+          <path d="M 1 80 H 29 M 24 75 L 29 80 L 24 85" />
         </svg>
         <button
           type="button"
           onClick={onExplore}
           disabled={isExploreDisabled}
           aria-describedby="explore-inputs"
-          className="button button--compact flow-explore"
+          className="button button--secondary button--compact flow-explore"
         >
           {exploreBusy ? "探索中" : "探索"}
         </button>
@@ -82,7 +81,7 @@ export function ExplorePanel({
           onClick={onAnswer}
           disabled={isAnswerDisabled}
           aria-describedby="answer-inputs"
-          className="button button--compact flow-answer"
+          className="button button--secondary button--compact flow-answer"
         >
           {answerBusy ? "解答中" : "解答"}
         </button>

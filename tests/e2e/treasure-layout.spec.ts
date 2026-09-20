@@ -19,6 +19,9 @@ test("compact collection stays below inputs and reveals acquired Z", async ({ pa
     return route.fulfill({ json: { result: "correct", message: "正解", clearedRoom: clearedRooms[0] } });
   });
   await page.goto("/events/layout/play?playerId=layout-player");
+  await expect(page.getByText("経過時間", { exact: true })).toBeVisible();
+  await expect(page.getByText("残り時間", { exact: true })).toHaveCount(0);
+  await expect(page.locator(".timer-value")).toHaveText(/^00:0[0-9]$/);
   await expect(page.getByRole("heading", { name: "ゲットした宝" })).toBeVisible();
   await expect(page.locator(".treasure-slot")).toHaveCount(25);
   await expect(page.getByText("宝Z", { exact: true })).toHaveCount(0);
@@ -26,6 +29,13 @@ test("compact collection stays below inputs and reveals acquired Z", async ({ pa
   for (const width of [320, 393, 768]) {
     await page.setViewportSize({ width, height: 667 });
     const controls = await page.locator(".control-bar").boundingBox();
+    expect((await page.locator(".input-flow").boundingBox())!.height).toBe(104);
+    for (const id of ["room-code", "answer"]) {
+      const label = await page.locator(`label[for="${id}"] span`).boundingBox();
+      const input = await page.locator(`#${id}`).boundingBox();
+      expect(label!.x + label!.width).toBeLessThan(input!.x);
+      expect(label!.y + label!.height / 2).toBeCloseTo(input!.y + input!.height / 2, 0);
+    }
     const collection = await page.locator(".treasure-panel").boundingBox();
     expect(controls!.y + controls!.height).toBeLessThan(collection!.y);
     const columns = await page.locator(".treasure-grid").evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(" ").length);

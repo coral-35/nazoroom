@@ -21,7 +21,8 @@ test("player can explore, answer, and avoid duplicate clears", async ({ page }) 
   });
   expect(startResponse.ok()).toBeTruthy();
 
-  await expect(page.getByText("残り時間")).toBeVisible();
+  await expect(page.getByText("経過時間")).toBeVisible();
+  await expect(page.getByText("残り時間", { exact: true })).toHaveCount(0);
 
   await expect(page.getByText("プレイヤー画面", { exact: true })).toHaveCount(0);
   await expect(page.locator(".treasure-slot")).toHaveCount(25);

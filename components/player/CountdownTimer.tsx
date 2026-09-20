@@ -5,12 +5,13 @@ import type { EventStatus } from "@/lib/types/app";
 
 type CountdownTimerProps = {
   status?: EventStatus;
+  startAt: number | null;
   deadlineAt: number | null;
   onExpire: () => void;
 };
 
-export function CountdownTimer({ status, deadlineAt, onExpire }: CountdownTimerProps) {
-  const [remainingMs, setRemainingMs] = useState<number | null>(null);
+export function CountdownTimer({ status, startAt, deadlineAt, onExpire }: CountdownTimerProps) {
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
   const expiredOnce = useRef(false);
   const onExpireRef = useRef(onExpire);
 
@@ -21,16 +22,16 @@ export function CountdownTimer({ status, deadlineAt, onExpire }: CountdownTimerP
   useEffect(() => {
     expiredOnce.current = false;
 
-    if (!deadlineAt || status === "ended") {
-      setRemainingMs(null);
+    if (!startAt || !deadlineAt) {
+      setElapsedMs(null);
       return;
     }
 
     const tick = () => {
-      const nextRemaining = calculateRemaining(deadlineAt);
-      setRemainingMs(nextRemaining);
+      const now = Date.now();
+      setElapsedMs(Math.max(0, Math.min(now, deadlineAt) - startAt));
 
-      if (nextRemaining <= 0 && !expiredOnce.current) {
+      if ((status === "ended" || now >= deadlineAt) && !expiredOnce.current) {
         expiredOnce.current = true;
         onExpireRef.current();
       }
@@ -40,39 +41,20 @@ export function CountdownTimer({ status, deadlineAt, onExpire }: CountdownTimerP
     const intervalId = window.setInterval(tick, 1_000);
 
     return () => window.clearInterval(intervalId);
-  }, [deadlineAt, status]);
-
-  if (!deadlineAt && status !== "ended") {
-    return (
-      <div className="timer-box">
-        <p className="timer-label">残り時間</p>
-        <p className="timer-value">制限なし</p>
-      </div>
-    );
-  }
-
-  const expired = status === "ended" || (remainingMs !== null && remainingMs <= 0);
+  }, [deadlineAt, startAt, status]);
 
   return (
     <div className="timer-box">
-      <p className="timer-label">残り時間</p>
+      <p className="timer-label">経過時間</p>
       <p className="timer-value">
-        {expired ? "終了" : remainingMs === null ? "--:--" : formatRemaining(remainingMs)}
+        {elapsedMs === null ? "--:--" : formatElapsed(elapsedMs)}
       </p>
     </div>
   );
 }
 
-function calculateRemaining(deadlineAt: number | null) {
-  if (!deadlineAt) {
-    return Number.POSITIVE_INFINITY;
-  }
-
-  return Math.max(0, deadlineAt - Date.now());
-}
-
-function formatRemaining(ms: number) {
-  const totalSeconds = Math.ceil(ms / 1_000);
+export function formatElapsed(ms: number) {
+  const totalSeconds = Math.floor(Math.max(0, ms) / 1_000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
 
