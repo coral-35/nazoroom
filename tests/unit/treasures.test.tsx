@@ -38,6 +38,8 @@ describe("treasure collection", () => {
       logId: "hidden", roomCode: "204", resultType: "hidden_clue",
       title: "部屋の詳細", message: "違和感がある", createdAt: "2026-09-20"
     } }));
-    expect(html).toBe("");
+    expect(html).toContain("部屋 204");
+    expect(html).not.toContain("部屋の詳細");
+    expect(html).not.toContain("違和感");
   });
 });

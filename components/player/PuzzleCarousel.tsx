@@ -25,9 +25,6 @@ export function PuzzleCarousel({ cards, loading }: PuzzleCarouselProps) {
       <div className="puzzle-empty">
         <p className="kicker">探索ログ</p>
         <h2 className="card-title">まだ部屋を探索していません</h2>
-        <p className="lead">
-          部屋番号を入力して探索すると、ここにログや謎カードが残ります。
-        </p>
       </div>
     );
   }
@@ -38,7 +35,6 @@ export function PuzzleCarousel({ cards, loading }: PuzzleCarouselProps) {
         <div>
           <p className="kicker">探索ログ</p>
           <h2 className="card-title">見つけた部屋</h2>
-          <p className="muted">未クリアの問題を優先して表示します。</p>
         </div>
         <button
           type="button"

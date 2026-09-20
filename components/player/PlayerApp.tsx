@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { normalizeRoomCode } from "@/lib/domain/normalize";
 import { useCallback, useEffect, useState } from "react";
 import { CountdownTimer } from "@/components/player/CountdownTimer";
 import { ExplorePanel } from "@/components/player/ExplorePanel";
-import { PuzzleCard } from "@/components/player/PuzzleCard";
+import { PuzzleCarousel } from "@/components/player/PuzzleCarousel";
 import { RankingTable } from "@/components/player/RankingTable";
 import { ClearedRoomList } from "@/components/player/ClearedRoomList";
 import { sortExploredRoomCards } from "@/lib/domain/explorationCards";
@@ -357,9 +356,9 @@ export function PlayerApp({
         />
       </section>
 
-      {cards.filter((card) => card.resultType === "show_puzzle" && normalizeRoomCode(card.roomCode) === normalizeRoomCode(roomCode) && !card.cleared).map((card) => (
-        <PuzzleCard key={card.logId} card={card} />
-      ))}
+      <section className="puzzle-stage" aria-label="部屋の探索">
+        <PuzzleCarousel cards={cards} loading={loading} />
+      </section>
 
       <ClearedRoomList clearedRooms={clearedRooms} />
 
