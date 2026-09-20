@@ -4,6 +4,7 @@ import { defineConfig } from "vitest/config";
 const projectRoot = fileURLToPath(new URL("./", import.meta.url)).replace(/\\/g, "/");
 
 export default defineConfig({
+  esbuild: { jsx: "automatic" },
   resolve: {
     alias: [{ find: /^@\//, replacement: `${projectRoot}/` }]
   },

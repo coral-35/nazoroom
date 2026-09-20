@@ -691,3 +691,82 @@ img {
     grid-template-columns: 1fr;
   }
 }
+
+/* Keep the player controls and collection compact on mobile. */
+.play-shell {
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.play-shell .player-header {
+  padding: 10px 12px;
+}
+
+.player-header .muted {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.play-shell .control-bar {
+  position: static;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.explore-row {
+  grid-template-columns: 4rem minmax(0, 1fr) 4rem;
+  gap: 6px;
+}
+
+.explore-feedback {
+  padding: 6px 8px;
+}
+
+.treasure-panel {
+  padding: 12px;
+}
+
+.treasure-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.treasure-slot {
+  display: grid;
+  place-items: center;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--accent-strong);
+  font-weight: 800;
+}
+
+.treasure-slot[data-acquired="true"] {
+  background: #e9f6f2;
+}
+
+.treasure-secret {
+  grid-column: 3;
+}
+
+.compact-puzzle {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.compact-puzzle .puzzle-text {
+  min-height: 0;
+  margin: 0;
+}
+
+.compact-puzzle .puzzle-image {
+  max-height: 180px;
+  margin-top: 6px;
+}

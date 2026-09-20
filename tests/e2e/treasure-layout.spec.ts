@@ -1,0 +1,36 @@
+import { expect, test } from "@playwright/test";
+
+test("compact collection stays below inputs and reveals acquired Z", async ({ page }) => {
+  const clearedRooms: { roomCode: string; clearedAt: string; treasureName: string }[] = [];
+  await page.route("**/api/events/*/state?*", (route) => route.fulfill({ json: {
+    event: { id: "layout", title: "謎解きダンジョン", status: "active", startsAt: new Date().toISOString(), endsAt: null, durationMinutes: 60 },
+    player: { id: "layout-player", nickname: "テスト" },
+    explorationLogs: [], clearedRooms, ranking: null
+  } }));
+  await page.route("**/api/events/*/answer", (route) => {
+    clearedRooms.push({ roomCode: "secret", clearedAt: new Date().toISOString(), treasureName: "宝Z" });
+    return route.fulfill({ json: { result: "correct", message: "正解", clearedRoom: clearedRooms[0] } });
+  });
+  await page.goto("/events/layout/play?playerId=layout-player");
+  await expect(page.getByRole("heading", { name: "ゲットした宝" })).toBeVisible();
+  await expect(page.locator(".treasure-slot")).toHaveCount(25);
+  await expect(page.getByText("宝Z", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("プレイヤー画面", { exact: true })).toHaveCount(0);
+  for (const width of [320, 393, 768]) {
+    await page.setViewportSize({ width, height: 667 });
+    const controls = await page.locator(".control-bar").boundingBox();
+    const collection = await page.locator(".treasure-panel").boundingBox();
+    expect(controls!.y + controls!.height).toBeLessThan(collection!.y);
+    expect(collection!.y + collection!.height).toBeLessThan(667);
+    const columns = await page.locator(".treasure-grid").evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(" ").length);
+    expect(columns).toBe(5);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+  }
+  await page.getByLabel("部屋番号").fill("secret");
+  await page.getByLabel("解答", { exact: true }).fill("answer");
+  await page.getByRole("button", { name: "解答", exact: true }).click();
+  await expect(page.getByText("宝Z", { exact: true })).toBeVisible();
+  await expect(page.locator(".treasure-slot")).toHaveCount(26);
+  await page.reload();
+  await expect(page.getByText("宝Z", { exact: true })).toBeVisible();
+});

@@ -1,3 +1,4 @@
+import { treasureNameForOrder } from "@/lib/domain/treasures";
 import { isEventActive, isEventExpired } from "@/lib/domain/eventStatus";
 import { normalizeAnswer, normalizeRoomCode } from "@/lib/domain/normalize";
 import { calculateRanking } from "@/lib/domain/scoring";
@@ -196,10 +197,11 @@ export function createNazoroomService(
         throw new AppError("参加情報が確認できません。再参加してください。", 404);
       }
 
-      const [explorationLogs, clearedRooms, ranking] = await Promise.all([
+      const [explorationLogs, clearedRooms, ranking, rooms] = await Promise.all([
         repository.listExplorationCards(eventId, playerId),
         repository.listPlayerClears(eventId, playerId),
-        event.status === "ended" ? calculateEventRanking(repository, eventId) : null
+        event.status === "ended" ? calculateEventRanking(repository, eventId) : null,
+        repository.listRooms(eventId)
       ]);
 
       return {
@@ -211,6 +213,7 @@ export function createNazoroomService(
         explorationLogs,
         clearedRooms: clearedRooms.map((clearedRoom) => ({
           roomCode: clearedRoom.roomCode,
+          treasureName: treasureNameForOrder(rooms.find((room) => room.id === clearedRoom.roomId)?.sortOrder),
           clearedAt: clearedRoom.clearedAt
         })),
         ranking
@@ -345,6 +348,7 @@ export function createNazoroomService(
           result: "already_cleared",
           message: "この部屋はすでにクリアしています。",
           clearedRoom: {
+            treasureName: treasureNameForOrder(room.sortOrder),
             roomCode: existingClear.roomCode,
             clearedAt: existingClear.clearedAt
           }
@@ -397,6 +401,7 @@ export function createNazoroomService(
           ? `正解。部屋 ${clearedRoom.roomCode} をクリアしました。`
           : "この部屋はすでにクリアしています。",
         clearedRoom: {
+          treasureName: treasureNameForOrder(room.sortOrder),
           roomCode: clearedRoom.roomCode,
           clearedAt: clearedRoom.clearedAt
         }
@@ -465,14 +470,7 @@ function buildExploreMessage(inputRoomCode: string, room: RoomRecord | null) {
     return `部屋 ${inputRoomCode} を探索した。しかし、この番号に対応する部屋は見つからなかった。`;
   }
 
-  if (room.exploreType === "hidden_clue") {
-    return (
-      room.hiddenMessage ??
-      `部屋 ${room.roomCode} の扉に近づいた。画面上にはロックが表示されない。だが、周囲に何か違和感がある。`
-    );
-  }
-
-  return `部屋 ${room.roomCode} のロックを発見した。`;
+  return `部屋 ${room.roomCode} を探索しました。`;
 }
 
 function eventNotActiveMessage(event: EventRecord, at: Date) {

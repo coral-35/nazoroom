@@ -108,6 +108,7 @@ export type ExploredRoomCard = {
 };
 
 export type ClearedRoomItem = {
+  treasureName?: string;
   roomCode: string;
   clearedAt: string;
 };
@@ -185,6 +186,7 @@ export type AnswerResponse = {
   result: AnswerResult;
   message: string;
   clearedRoom?: {
+    treasureName?: string;
     roomCode: string;
     clearedAt: string;
   };

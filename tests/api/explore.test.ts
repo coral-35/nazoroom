@@ -28,6 +28,7 @@ describe("explore service", () => {
     const result = await service.explore(DEFAULT_EVENT_ID, joined.player.id, "204");
 
     expect(result.resultType).toBe("hidden_clue");
+    expect(result.message).toBe("部屋 204 を探索しました。");
     expect(result.room).toEqual({
       roomCode: "204",
       title: "現地探索型の謎",

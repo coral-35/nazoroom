@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { normalizeRoomCode } from "@/lib/domain/normalize";
 import { useCallback, useEffect, useState } from "react";
 import { CountdownTimer } from "@/components/player/CountdownTimer";
 import { ExplorePanel } from "@/components/player/ExplorePanel";
-import { PuzzleCarousel } from "@/components/player/PuzzleCarousel";
+import { PuzzleCard } from "@/components/player/PuzzleCard";
 import { RankingTable } from "@/components/player/RankingTable";
 import { ClearedRoomList } from "@/components/player/ClearedRoomList";
 import { sortExploredRoomCards } from "@/lib/domain/explorationCards";
@@ -313,10 +314,9 @@ export function PlayerApp({
       <header className="player-header">
         <div className="player-header-row">
           <div>
-            <p className="kicker">プレイヤー画面</p>
             <h1 className="card-title">{eventTitle}</h1>
             <p className="muted">
-              {state?.player.nickname ?? "読み込み中"} / クリア {clearedRoomCount}部屋
+              {state?.player.nickname ?? "読み込み中"} / 宝 {clearedRoomCount}個
             </p>
           </div>
           <CountdownTimer
@@ -335,12 +335,6 @@ export function PlayerApp({
         </section>
       ) : null}
 
-      <section className="puzzle-stage">
-        <PuzzleCarousel cards={cards} loading={loading} />
-      </section>
-
-      <ClearedRoomList clearedRooms={clearedRooms} />
-
       <section className="control-bar">
         <ExplorePanel
           roomCode={roomCode}
@@ -356,6 +350,12 @@ export function PlayerApp({
           answerDisabled={answerDisabled}
         />
       </section>
+
+      {cards.filter((card) => card.resultType === "show_puzzle" && normalizeRoomCode(card.roomCode) === normalizeRoomCode(roomCode) && !card.cleared).map((card) => (
+        <PuzzleCard key={card.logId} card={card} />
+      ))}
+
+      <ClearedRoomList clearedRooms={clearedRooms} />
 
       {!ranking && timeUp ? (
         <section className="result-waiting">
@@ -382,6 +382,7 @@ function upsertClearedRoom(
   return [
     ...current,
     {
+      treasureName: clearedRoom.treasureName,
       roomCode: clearedRoom.roomCode,
       clearedAt: clearedRoom.clearedAt
     }

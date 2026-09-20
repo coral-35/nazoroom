@@ -26,6 +26,8 @@ describe("answer service", () => {
 
     expect(result.result).toBe("correct");
     expect(result.clearedRoom?.roomCode).toBe("305");
+    expect(result.clearedRoom?.treasureName).toBe("宝A");
+    expect(state.clearedRooms[0]?.treasureName).toBe("宝A");
     expect(state.clearedRooms).toHaveLength(1);
   });
 
@@ -38,6 +40,7 @@ describe("answer service", () => {
     const state = await service.getState(DEFAULT_EVENT_ID, joined.player.id);
 
     expect(second.result).toBe("already_cleared");
+    expect(second.clearedRoom?.treasureName).toBe("宝A");
     expect(state.clearedRooms).toHaveLength(1);
   });
 

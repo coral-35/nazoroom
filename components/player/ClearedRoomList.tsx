@@ -1,23 +1,22 @@
+import { TREASURE_NAMES } from "@/lib/domain/treasures";
 import type { ClearedRoomItem } from "@/lib/types/app";
 
-type ClearedRoomListProps = {
-  clearedRooms: ClearedRoomItem[];
-};
-
-export function ClearedRoomList({ clearedRooms }: ClearedRoomListProps) {
-  const roomCodes = clearedRooms
-    .map((room) => room.roomCode)
-    .sort((a, b) => a.localeCompare(b, "ja", { numeric: true }));
+export function ClearedRoomList({ clearedRooms }: { clearedRooms: ClearedRoomItem[] }) {
+  const acquired = new Set(clearedRooms.map((room) => room.treasureName));
 
   return (
-    <section className="panel panel--tight cleared-room-panel">
-      <div className="panel-header">
-        <h2 className="card-title">クリアした部屋</h2>
-        <span className="muted">{roomCodes.length}部屋</span>
+    <section className="panel panel--tight treasure-panel" aria-label="ゲットした宝">
+      <h2 className="card-title">ゲットした宝</h2>
+      <div className="treasure-grid">
+        {TREASURE_NAMES.slice(0, 25).map((name) => (
+          <div key={name} className="treasure-slot" data-acquired={acquired.has(name)}>
+            {acquired.has(name) ? name : null}
+          </div>
+        ))}
+        {acquired.has("宝Z") ? (
+          <div className="treasure-slot treasure-secret" data-acquired="true">宝Z</div>
+        ) : null}
       </div>
-      <p className="cleared-room-codes">
-        {roomCodes.length ? roomCodes.join(" / ") : "まだクリアした部屋はありません。"}
-      </p>
     </section>
   );
 }
