@@ -21,7 +21,11 @@ export default async function AdminProblemsPage({ params }: AdminProblemsPagePro
           進行画面へ
         </Link>
       </div>
-      <AdminRoomEditor eventId={eventId} initialRooms={rooms.rooms} />
+      <AdminRoomEditor
+        eventId={eventId}
+        initialRooms={rooms.rooms}
+        initialProblems={rooms.problems}
+      />
     </main>
   );
 }

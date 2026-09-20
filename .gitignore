@@ -16,3 +16,4 @@ pnpm-debug.log*
 tsconfig.tsbuildinfo
 .DS_Store
 .next-dev/
+.vercel

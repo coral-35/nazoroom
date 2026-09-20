@@ -7,6 +7,7 @@ import type {
   ExplorationLogRecord,
   PlayerRecord,
   PlayerClearRecord,
+  ProblemBankRecord,
   RoomAnswerRecord,
   RoomRecord,
   AnswerAttemptRecord
@@ -22,6 +23,7 @@ import {
 export type MemoryState = {
   events: EventRecord[];
   players: PlayerRecord[];
+  problemBank: ProblemBankRecord[];
   rooms: RoomRecord[];
   roomAnswers: RoomAnswerRecord[];
   explorationLogs: ExplorationLogRecord[];
@@ -36,6 +38,9 @@ type MemoryRepositoryOptions = {
 const ROOM_305_ID = "10000000-0000-0000-0000-000000000001";
 const ROOM_204_ID = "10000000-0000-0000-0000-000000000002";
 const ROOM_A01_ID = "10000000-0000-0000-0000-000000000003";
+const PROBLEM_001_ID = "20000000-0000-0000-0000-000000000001";
+const PROBLEM_002_ID = "20000000-0000-0000-0000-000000000002";
+const PROBLEM_003_ID = "20000000-0000-0000-0000-000000000003";
 
 export function createSeedMemoryState(now: Date = new Date()): MemoryState {
   const startsAt = new Date(now.getTime() - 5 * 60_000).toISOString();
@@ -55,16 +60,18 @@ export function createSeedMemoryState(now: Date = new Date()): MemoryState {
       }
     ],
     players: [],
+    problemBank: createProblemBank(createdAt),
     rooms: [
       {
         id: ROOM_305_ID,
         eventId: DEFAULT_EVENT_ID,
+        problemId: PROBLEM_001_ID,
         roomCode: "305",
         normalizedRoomCode: "305",
         exploreType: "show_puzzle",
         title: "古びた時計の暗号",
         puzzleText: "時計の針が示す言葉を読め。",
-        puzzleImageUrl: null,
+        puzzleImageUrl: "/puzzles/frame-01.png",
         hiddenMessage: null,
         sortOrder: 1,
         isActive: true,
@@ -74,6 +81,7 @@ export function createSeedMemoryState(now: Date = new Date()): MemoryState {
       {
         id: ROOM_204_ID,
         eventId: DEFAULT_EVENT_ID,
+        problemId: PROBLEM_002_ID,
         roomCode: "204",
         normalizedRoomCode: "204",
         exploreType: "hidden_clue",
@@ -89,12 +97,13 @@ export function createSeedMemoryState(now: Date = new Date()): MemoryState {
       {
         id: ROOM_A01_ID,
         eventId: DEFAULT_EVENT_ID,
-        roomCode: "A-01",
-        normalizedRoomCode: "A-01",
+        problemId: PROBLEM_003_ID,
+        roomCode: "101",
+        normalizedRoomCode: "101",
         exploreType: "show_puzzle",
         title: "封筒の記号",
         puzzleText: "封筒に描かれた線を順にたどれ。",
-        puzzleImageUrl: null,
+        puzzleImageUrl: "/puzzles/frame-03.png",
         hiddenMessage: null,
         sortOrder: 3,
         isActive: true,
@@ -319,6 +328,11 @@ export function createMemoryRepository(
       return buildAdminRooms(eventId);
     },
 
+    async listProblemBank() {
+      readLatest();
+      return [...state.problemBank].sort((a, b) => a.problemNumber - b.problemNumber);
+    },
+
     async upsertRoom(input) {
       readLatest();
       const room = upsertMemoryRoom(input);
@@ -393,6 +407,7 @@ export function createMemoryRepository(
       const current = state.rooms[existingIndex];
       const next: RoomRecord = {
         ...current,
+        problemId: input.problemId,
         roomCode: input.roomCode,
         normalizedRoomCode: input.normalizedRoomCode,
         exploreType: input.exploreType,
@@ -411,6 +426,7 @@ export function createMemoryRepository(
     const room: RoomRecord = {
       id: crypto.randomUUID(),
       eventId: input.eventId,
+      problemId: input.problemId,
       roomCode: input.roomCode,
       normalizedRoomCode: input.normalizedRoomCode,
       exploreType: input.exploreType,
@@ -442,6 +458,49 @@ export function createMemoryRepository(
         .sort((a, b) => a.answerText.localeCompare(b.answerText))
     };
   }
+}
+
+function createProblemBank(createdAt: string): ProblemBankRecord[] {
+  return Array.from({ length: 27 }, (_, index) => {
+    const problemNumber = index + 1;
+    const special = {
+      1: { id: PROBLEM_001_ID, roomCode: "305", answers: ["ひかり"] },
+      2: { id: PROBLEM_002_ID, roomCode: "204", answers: ["ほし"] },
+      3: { id: PROBLEM_003_ID, roomCode: "101", answers: ["たいよう"] }
+    }[problemNumber];
+
+    return createProblem(
+      special?.id ?? `20000000-0000-0000-0000-${String(problemNumber).padStart(12, "0")}`,
+      problemNumber,
+      special?.roomCode ?? String(problemNumber),
+      `問題 ${problemNumber}`,
+      `/puzzles/frame-${String(problemNumber).padStart(2, "0")}.png`,
+      special?.answers ?? [`答え${problemNumber}`],
+      createdAt
+    );
+  });
+}
+
+function createProblem(
+  id: string,
+  problemNumber: number,
+  roomCode: string,
+  title: string,
+  puzzleImageUrl: string,
+  defaultAnswers: string[],
+  createdAt: string
+): ProblemBankRecord {
+  return {
+    id,
+    problemNumber,
+    roomCode,
+    normalizedRoomCode: roomCode,
+    title,
+    puzzleImageUrl,
+    defaultAnswers,
+    createdAt,
+    updatedAt: createdAt
+  };
 }
 
 function loadState(persistPath?: string): MemoryState | null {

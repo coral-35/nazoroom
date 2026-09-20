@@ -23,6 +23,7 @@ export default async function AdminProblemsPage() {
         eventId={DEFAULT_EVENT_ID}
         apiBasePath="/api/admin/event"
         initialRooms={rooms.rooms}
+        initialProblems={rooms.problems}
       />
     </main>
   );

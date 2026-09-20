@@ -4,17 +4,20 @@ import { FormEvent, useState } from "react";
 import type {
   AdminRoomRecord,
   AdminRoomsResponse,
-  ExploreType
+  ExploreType,
+  ProblemBankRecord
 } from "@/lib/types/app";
 
 type AdminRoomEditorProps = {
   eventId: string;
   apiBasePath?: string;
   initialRooms: AdminRoomRecord[];
+  initialProblems?: ProblemBankRecord[];
 };
 
 type EditableRoom = {
   id?: string;
+  problemId: string;
   roomCode: string;
   exploreType: ExploreType;
   title: string;
@@ -31,9 +34,11 @@ const NEW_ROOM_KEY = "new-room";
 export function AdminRoomEditor({
   eventId,
   apiBasePath = `/api/admin/events/${eventId}`,
-  initialRooms
+  initialRooms,
+  initialProblems = []
 }: AdminRoomEditorProps) {
   const [rooms, setRooms] = useState(initialRooms.map(toEditableRoom));
+  const [problems] = useState(initialProblems);
   const [newRoom, setNewRoom] = useState<EditableRoom>(createEmptyRoom());
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +110,7 @@ export function AdminRoomEditor({
             title={`部屋 ${room.roomCode || "未設定"}`}
             room={room}
             busy={busyKey === room.id}
+            problems={problems}
             onChange={(patch) =>
               setRooms((current) =>
                 current.map((item, itemIndex) =>
@@ -120,6 +126,7 @@ export function AdminRoomEditor({
           title="新しい問題を追加"
           room={newRoom}
           busy={busyKey === NEW_ROOM_KEY}
+          problems={problems}
           onChange={(patch) => setNewRoom((current) => ({ ...current, ...patch }))}
           onSave={(nextRoom) => saveRoom(nextRoom, NEW_ROOM_KEY)}
         />
@@ -132,11 +139,12 @@ type RoomFormProps = {
   title: string;
   room: EditableRoom;
   busy: boolean;
+  problems: ProblemBankRecord[];
   onChange: (patch: Partial<EditableRoom>) => void;
   onSave: (room: EditableRoom) => void;
 };
 
-function RoomForm({ title, room, busy, onChange, onSave }: RoomFormProps) {
+function RoomForm({ title, room, busy, problems, onChange, onSave }: RoomFormProps) {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     onSave(room);
@@ -147,7 +155,9 @@ function RoomForm({ title, room, busy, onChange, onSave }: RoomFormProps) {
       <div className="card-header">
         <div>
           <p className="kicker">{room.isActive ? "公開中" : "無効"}</p>
-          <h3 className="card-title">{title}</h3>
+          <h3 className="card-title">
+            {title} / {treasureLabel(room.sortOrder)}
+          </h3>
         </div>
         <label className="checkbox-field">
           <input
@@ -161,12 +171,44 @@ function RoomForm({ title, room, busy, onChange, onSave }: RoomFormProps) {
 
       <div className="admin-room-fields">
         <label className="field">
+          問題
+          <select
+            value={room.problemId}
+            onChange={(event) => {
+              const problem = problems.find((item) => item.id === event.target.value);
+              onChange(
+                problem
+                  ? {
+                      problemId: problem.id,
+                      roomCode: problem.roomCode,
+                      exploreType: "show_puzzle",
+                      title: problem.title ?? `問題 ${problem.problemNumber}`,
+                      puzzleText: "",
+                      puzzleImageUrl: problem.puzzleImageUrl,
+                      hiddenMessage: "",
+                      answersText: problem.defaultAnswers.join("\n")
+                    }
+                  : { problemId: "" }
+              );
+            }}
+            className="input"
+          >
+            <option value="">手入力</option>
+            {problems.map((problem) => (
+              <option key={problem.id} value={problem.id}>
+                {problem.problemNumber}. 部屋 {problem.roomCode}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
           部屋番号
           <input
             value={room.roomCode}
             onChange={(event) => onChange({ roomCode: event.target.value })}
             className="input"
             placeholder="305"
+            disabled={Boolean(room.problemId)}
           />
         </label>
         <label className="field">
@@ -177,6 +219,7 @@ function RoomForm({ title, room, busy, onChange, onSave }: RoomFormProps) {
               onChange({ exploreType: event.target.value as ExploreType })
             }
             className="input"
+            disabled={Boolean(room.problemId)}
           >
             <option value="show_puzzle">画面に謎を表示</option>
             <option value="hidden_clue">現地探索のみ</option>
@@ -200,6 +243,7 @@ function RoomForm({ title, room, busy, onChange, onSave }: RoomFormProps) {
             onChange={(event) => onChange({ title: event.target.value })}
             className="input"
             placeholder="古びた時計の暗号"
+            disabled={Boolean(room.problemId)}
           />
         </label>
         <label className="field field--full">
@@ -208,6 +252,7 @@ function RoomForm({ title, room, busy, onChange, onSave }: RoomFormProps) {
             value={room.puzzleText}
             onChange={(event) => onChange({ puzzleText: event.target.value })}
             className="input input--textarea"
+            disabled={Boolean(room.problemId)}
           />
         </label>
         <label className="field field--full">
@@ -217,6 +262,7 @@ function RoomForm({ title, room, busy, onChange, onSave }: RoomFormProps) {
             onChange={(event) => onChange({ puzzleImageUrl: event.target.value })}
             className="input"
             placeholder="https://..."
+            disabled={Boolean(room.problemId)}
           />
         </label>
         <label className="field field--full">
@@ -225,6 +271,7 @@ function RoomForm({ title, room, busy, onChange, onSave }: RoomFormProps) {
             value={room.hiddenMessage}
             onChange={(event) => onChange({ hiddenMessage: event.target.value })}
             className="input input--textarea"
+            disabled={Boolean(room.problemId)}
           />
         </label>
         <label className="field field--full">
@@ -236,6 +283,11 @@ function RoomForm({ title, room, busy, onChange, onSave }: RoomFormProps) {
             placeholder={"ひかり\nヒカリ"}
           />
         </label>
+        {room.puzzleImageUrl ? (
+          <div className="admin-problem-preview field--full">
+            <img src={room.puzzleImageUrl} alt="" />
+          </div>
+        ) : null}
       </div>
 
       <div className="button-grid">
@@ -259,9 +311,19 @@ function RoomForm({ title, room, busy, onChange, onSave }: RoomFormProps) {
   );
 }
 
+function treasureLabel(sortOrder: string) {
+  const order = Number(sortOrder);
+  if (!Number.isInteger(order) || order < 1 || order > 26) {
+    return "宝未割当";
+  }
+
+  return `宝${String.fromCharCode(64 + order)}`;
+}
+
 function toEditableRoom(room: AdminRoomRecord): EditableRoom {
   return {
     id: room.id,
+    problemId: room.problemId ?? "",
     roomCode: room.roomCode,
     exploreType: room.exploreType,
     title: room.title ?? "",
@@ -276,6 +338,7 @@ function toEditableRoom(room: AdminRoomRecord): EditableRoom {
 
 function createEmptyRoom(): EditableRoom {
   return {
+    problemId: "",
     roomCode: "",
     exploreType: "show_puzzle",
     title: "",
@@ -291,6 +354,7 @@ function createEmptyRoom(): EditableRoom {
 function toPayload(room: EditableRoom) {
   return {
     id: room.id,
+    problemId: room.problemId || null,
     roomCode: room.roomCode,
     exploreType: room.exploreType,
     title: room.title,

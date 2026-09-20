@@ -36,6 +36,7 @@ export type PlayerRecord = {
 export type RoomRecord = {
   id: string;
   eventId: string;
+  problemId: string | null;
   roomCode: string;
   normalizedRoomCode: string;
   exploreType: ExploreType;
@@ -45,6 +46,18 @@ export type RoomRecord = {
   hiddenMessage: string | null;
   sortOrder: number;
   isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ProblemBankRecord = {
+  id: string;
+  problemNumber: number;
+  roomCode: string;
+  normalizedRoomCode: string;
+  title: string | null;
+  puzzleImageUrl: string;
+  defaultAnswers: string[];
   createdAt?: string;
   updatedAt?: string;
 };
@@ -165,6 +178,7 @@ export type AdminDashboardResponse = {
 
 export type AdminRoomsResponse = {
   rooms: AdminRoomRecord[];
+  problems: ProblemBankRecord[];
   message?: string;
 };
 

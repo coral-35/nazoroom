@@ -10,7 +10,7 @@ import type {
   AnswerResult,
   EventRecord
 } from "@/lib/types/app";
-import type { AdminRoomRecord, ExploreType } from "@/lib/types/app";
+import type { AdminRoomRecord, ExploreType, ProblemBankRecord } from "@/lib/types/app";
 
 export type CreateExplorationLogInput = {
   eventId: string;
@@ -50,6 +50,7 @@ export type UpdateEventInput = {
 export type UpsertRoomInput = {
   eventId: string;
   roomId?: string;
+  problemId: string | null;
   roomCode: string;
   normalizedRoomCode: string;
   exploreType: ExploreType;
@@ -93,6 +94,7 @@ export type NazoroomRepository = {
   listPlayers(eventId: string): Promise<PlayerRecord[]>;
   listRooms(eventId: string): Promise<RoomRecord[]>;
   listAdminRooms(eventId: string): Promise<AdminRoomRecord[]>;
+  listProblemBank(): Promise<ProblemBankRecord[]>;
   upsertRoom(input: UpsertRoomInput): Promise<AdminRoomRecord>;
   listAllClears(eventId: string): Promise<PlayerClearRecord[]>;
 };

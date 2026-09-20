@@ -1,19 +1,29 @@
-insert into public.events (id, title, status, starts_at, ends_at, duration_minutes)
-values (
-  '00000000-0000-0000-0000-000000000001',
-  '謎解きダンジョン',
-  'draft',
-  null,
-  null,
-  60
-)
-on conflict (id) do update
-set
-  title = excluded.title,
-  status = excluded.status,
-  starts_at = excluded.starts_at,
-  ends_at = excluded.ends_at,
-  duration_minutes = excluded.duration_minutes;
+create table if not exists public.problem_bank (
+  id uuid primary key default gen_random_uuid(),
+  problem_number integer not null unique check (problem_number between 1 and 27),
+  room_code text not null,
+  normalized_room_code text not null,
+  title text,
+  puzzle_image_url text not null,
+  default_answers text[] not null default '{}',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.rooms
+add column if not exists problem_id uuid references public.problem_bank(id) on delete set null;
+
+drop trigger if exists set_problem_bank_updated_at on public.problem_bank;
+create trigger set_problem_bank_updated_at
+before update on public.problem_bank
+for each row execute function public.set_updated_at();
+
+create index if not exists problem_bank_number_idx on public.problem_bank(problem_number);
+create index if not exists rooms_problem_id_idx on public.rooms(problem_id);
+
+alter table public.problem_bank enable row level security;
+
+grant select, insert, update, delete on public.problem_bank to service_role;
 
 insert into public.problem_bank (
   id,
@@ -58,79 +68,3 @@ set
   title = excluded.title,
   puzzle_image_url = excluded.puzzle_image_url,
   default_answers = excluded.default_answers;
-
-insert into public.rooms (
-  id,
-  event_id,
-  problem_id,
-  room_code,
-  normalized_room_code,
-  explore_type,
-  title,
-  puzzle_text,
-  puzzle_image_url,
-  hidden_message,
-  sort_order,
-  is_active
-) values
-(
-  '10000000-0000-0000-0000-000000000001',
-  '00000000-0000-0000-0000-000000000001',
-  '20000000-0000-0000-0000-000000000001',
-  '305',
-  '305',
-  'show_puzzle',
-  '古びた時計の暗号',
-  '時計の針が示す言葉を読め。',
-  '/puzzles/frame-01.png',
-  null,
-  1,
-  true
-),
-(
-  '10000000-0000-0000-0000-000000000002',
-  '00000000-0000-0000-0000-000000000001',
-  '20000000-0000-0000-0000-000000000002',
-  '204',
-  '204',
-  'hidden_clue',
-  '現地探索型の謎',
-  null,
-  null,
-  '部屋204の周囲に、画面には映らない違和感がある。',
-  2,
-  true
-),
-(
-  '10000000-0000-0000-0000-000000000003',
-  '00000000-0000-0000-0000-000000000001',
-  '20000000-0000-0000-0000-000000000003',
-  '101',
-  '101',
-  'show_puzzle',
-  '封筒の記号',
-  '封筒に描かれた線を順にたどれ。',
-  '/puzzles/frame-03.png',
-  null,
-  3,
-  true
-)
-on conflict (event_id, normalized_room_code) do update
-set
-  room_code = excluded.room_code,
-  problem_id = excluded.problem_id,
-  explore_type = excluded.explore_type,
-  title = excluded.title,
-  puzzle_text = excluded.puzzle_text,
-  puzzle_image_url = excluded.puzzle_image_url,
-  hidden_message = excluded.hidden_message,
-  sort_order = excluded.sort_order,
-  is_active = excluded.is_active;
-
-insert into public.room_answers (room_id, answer_text, normalized_answer)
-values
-('10000000-0000-0000-0000-000000000001', 'ひかり', 'ひかり'),
-('10000000-0000-0000-0000-000000000002', 'ほし', 'ほし'),
-('10000000-0000-0000-0000-000000000003', 'たいよう', 'たいよう')
-on conflict (room_id, normalized_answer) do update
-set answer_text = excluded.answer_text;

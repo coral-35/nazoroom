@@ -29,9 +29,22 @@ create table if not exists public.players (
   unique (event_id, nickname)
 );
 
+create table if not exists public.problem_bank (
+  id uuid primary key default gen_random_uuid(),
+  problem_number integer not null unique check (problem_number between 1 and 27),
+  room_code text not null,
+  normalized_room_code text not null,
+  title text,
+  puzzle_image_url text not null,
+  default_answers text[] not null default '{}',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.rooms (
   id uuid primary key default gen_random_uuid(),
   event_id uuid not null references public.events(id) on delete cascade,
+  problem_id uuid references public.problem_bank(id) on delete set null,
   room_code text not null,
   normalized_room_code text not null,
   explore_type text not null check (explore_type in ('hidden_clue', 'show_puzzle')),
@@ -108,10 +121,17 @@ create trigger set_rooms_updated_at
 before update on public.rooms
 for each row execute function public.set_updated_at();
 
+drop trigger if exists set_problem_bank_updated_at on public.problem_bank;
+create trigger set_problem_bank_updated_at
+before update on public.problem_bank
+for each row execute function public.set_updated_at();
+
 create index if not exists players_event_id_idx on public.players(event_id);
+create index if not exists problem_bank_number_idx on public.problem_bank(problem_number);
 create index if not exists rooms_event_code_idx
   on public.rooms(event_id, normalized_room_code)
   where is_active;
+create index if not exists rooms_problem_id_idx on public.rooms(problem_id);
 create index if not exists room_answers_room_id_idx on public.room_answers(room_id);
 create index if not exists exploration_logs_player_idx
   on public.exploration_logs(event_id, player_id, created_at);
@@ -122,6 +142,7 @@ create index if not exists answer_attempts_player_idx
 
 alter table public.events enable row level security;
 alter table public.players enable row level security;
+alter table public.problem_bank enable row level security;
 alter table public.rooms enable row level security;
 alter table public.room_answers enable row level security;
 alter table public.exploration_logs enable row level security;

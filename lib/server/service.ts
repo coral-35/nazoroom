@@ -136,7 +136,8 @@ export function createNazoroomService(
       await getExistingEvent(repository, eventId);
 
       return {
-        rooms: await repository.listAdminRooms(eventId)
+        rooms: await repository.listAdminRooms(eventId),
+        problems: await repository.listProblemBank()
       };
     },
 
@@ -146,11 +147,32 @@ export function createNazoroomService(
     ): Promise<AdminRoomsResponse> {
       await getExistingEvent(repository, eventId);
       const input = parseAdminRoomInput(rawRoom);
-      const rooms = await repository.listAdminRooms(eventId);
+      const [rooms, problems] = await Promise.all([
+        repository.listAdminRooms(eventId),
+        repository.listProblemBank()
+      ]);
+      const selectedProblem = input.problemId
+        ? problems.find((problem) => problem.id === input.problemId)
+        : null;
+      if (input.problemId && !selectedProblem) {
+        throw new AppError("問題を選択し直してください。", 400);
+      }
+      const roomInput = selectedProblem
+        ? {
+            ...input,
+            roomCode: selectedProblem.roomCode,
+            normalizedRoomCode: selectedProblem.normalizedRoomCode,
+            exploreType: "show_puzzle" as const,
+            title: selectedProblem.title,
+            puzzleText: null,
+            puzzleImageUrl: selectedProblem.puzzleImageUrl,
+            hiddenMessage: null
+          }
+        : input;
       const duplicate = rooms.find(
         (room) =>
-          room.normalizedRoomCode === input.normalizedRoomCode &&
-          room.id !== input.roomId
+          room.normalizedRoomCode === roomInput.normalizedRoomCode &&
+          room.id !== roomInput.roomId
       );
 
       if (duplicate) {
@@ -159,11 +181,12 @@ export function createNazoroomService(
 
       const saved = await repository.upsertRoom({
         eventId,
-        ...input
+        ...roomInput
       });
 
       return {
         rooms: await repository.listAdminRooms(eventId),
+        problems,
         message: `部屋 ${saved.roomCode} の問題を保存しました。`
       };
     },
@@ -509,6 +532,7 @@ function parseAdminRoomInput(
 
   return {
     roomId: parseOptionalText(input.id, 80) ?? undefined,
+    problemId: parseOptionalText(input.problemId, 80),
     roomCode,
     normalizedRoomCode: normalizeRoomCode(roomCode),
     exploreType,

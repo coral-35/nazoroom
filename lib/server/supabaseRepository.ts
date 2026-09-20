@@ -5,6 +5,7 @@ import type {
   ExplorationLogRecord,
   PlayerRecord,
   PlayerClearRecord,
+  ProblemBankRecord,
   RoomAnswerRecord,
   RoomRecord,
   AnswerAttemptRecord
@@ -345,6 +346,19 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
       return (data ?? []).map(mapAdminRoom);
     },
 
+    async listProblemBank() {
+      const { data, error } = await client
+        .from("problem_bank")
+        .select("*")
+        .order("problem_number", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      return (data ?? []).map(mapProblemBank);
+    },
+
     async upsertRoom(input) {
       return upsertRoomRow(client, input);
     },
@@ -413,6 +427,7 @@ async function updateEventRow(client: SupabaseClient, input: UpdateEventInput) {
 async function upsertRoomRow(client: SupabaseClient, input: UpsertRoomInput) {
   const payload = {
     event_id: input.eventId,
+    problem_id: input.problemId,
     room_code: input.roomCode,
     normalized_room_code: input.normalizedRoomCode,
     explore_type: input.exploreType,
@@ -505,6 +520,7 @@ function mapRoom(row: any): RoomRecord {
   return {
     id: row.id,
     eventId: row.event_id,
+    problemId: row.problem_id ?? null,
     roomCode: row.room_code,
     normalizedRoomCode: row.normalized_room_code,
     exploreType: row.explore_type,
@@ -514,6 +530,20 @@ function mapRoom(row: any): RoomRecord {
     hiddenMessage: row.hidden_message,
     sortOrder: row.sort_order,
     isActive: row.is_active,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+function mapProblemBank(row: any): ProblemBankRecord {
+  return {
+    id: row.id,
+    problemNumber: row.problem_number,
+    roomCode: row.room_code,
+    normalizedRoomCode: row.normalized_room_code,
+    title: row.title,
+    puzzleImageUrl: row.puzzle_image_url,
+    defaultAnswers: Array.isArray(row.default_answers) ? row.default_answers : [],
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };

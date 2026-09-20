@@ -72,6 +72,44 @@ describe("admin room service", () => {
     expect(answered.result).toBe("correct");
     expect(answered.clearedRoom?.roomCode).toBe("777");
   });
+
+  it("selects a problem from the bank and keeps editable answers", async () => {
+    const service = makeService();
+    const initial = await service.listAdminRooms(DEFAULT_EVENT_ID);
+    const problem = initial.problems.find((item) => item.problemNumber === 3);
+    const room = initial.rooms.find((item) => item.roomCode === "101");
+    expect(initial.problems).toHaveLength(27);
+    expect(problem).toBeTruthy();
+
+    await service.saveAdminRoom(DEFAULT_EVENT_ID, {
+      id: room?.id,
+      problemId: problem?.id,
+      roomCode: "999",
+      exploreType: "show_puzzle",
+      title: "手入力より問題マスタが優先",
+      puzzleText: "表示しない",
+      puzzleImageUrl: "",
+      hiddenMessage: "",
+      sortOrder: 4,
+      isActive: true,
+      answers: ["マスタから選んだ答え"]
+    });
+
+    const joined = await service.joinEvent(DEFAULT_EVENT_ID, "問題選択確認");
+    const explored = await service.explore(DEFAULT_EVENT_ID, joined.player.id, "101");
+    const wrongRoom = await service.explore(DEFAULT_EVENT_ID, joined.player.id, "999");
+    const answered = await service.answer(
+      DEFAULT_EVENT_ID,
+      joined.player.id,
+      "101",
+      "マスタから選んだ答え"
+    );
+
+    expect(explored.room?.puzzleImageUrl).toBe("/puzzles/frame-03.png");
+    expect(wrongRoom.resultType).toBe("not_found");
+    expect(answered.result).toBe("correct");
+    expect(answered.clearedRoom?.treasureName).toBe("宝D");
+  });
 });
 
 function makeService() {
