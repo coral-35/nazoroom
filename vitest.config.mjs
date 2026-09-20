@@ -11,6 +11,6 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.{test,spec}.ts", "tests/**/*.{test,spec}.tsx"],
-    exclude: ["tests/e2e/**", "node_modules/**", ".next/**"]
+    exclude: ["tests/e2e/**", "node_modules/**", ".next/**", ".next-dev/**"]
   }
 });
