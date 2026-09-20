@@ -12,23 +12,6 @@ type PuzzleCarouselProps = {
 export function PuzzleCarousel({ cards, loading }: PuzzleCarouselProps) {
   const rowRef = useRef<HTMLDivElement>(null);
 
-  if (loading) {
-    return (
-      <div className="puzzle-placeholder">
-        探索ログを読み込み中...
-      </div>
-    );
-  }
-
-  if (cards.length === 0) {
-    return (
-      <div className="puzzle-empty">
-        <p className="kicker">探索ログ</p>
-        <h2 className="card-title">まだ部屋を探索していません</h2>
-      </div>
-    );
-  }
-
   return (
     <div className="puzzle-panel">
       <div className="panel-header">
@@ -37,6 +20,7 @@ export function PuzzleCarousel({ cards, loading }: PuzzleCarouselProps) {
           <h2 className="card-title">見つけた部屋</h2>
         </div>
         <button
+          disabled={loading || cards.length === 0}
           type="button"
           onClick={() =>
             rowRef.current?.scrollTo({
@@ -50,7 +34,7 @@ export function PuzzleCarousel({ cards, loading }: PuzzleCarouselProps) {
         </button>
       </div>
       <div ref={rowRef} className="snap-row puzzle-row">
-        {cards.map((card, index) => (
+        {cards.length === 0 ? <PuzzleCard loading={loading} /> : cards.map((card, index) => (
           <PuzzleCard
             key={card.logId}
             card={card}

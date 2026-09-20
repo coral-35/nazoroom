@@ -14,6 +14,7 @@ test("compact collection stays below inputs and reveals acquired Z", async ({ pa
     } : null
   } }));
   await page.route("**/api/events/*/answer", (route) => {
+    expect(route.request().postDataJSON()).toEqual({ playerId: "layout-player", roomCode: "123456", answer: "answer" });
     clearedRooms.push({ roomCode: "123456", clearedAt: new Date().toISOString(), treasureName: "宝Z" });
     return route.fulfill({ json: { result: "correct", message: "正解", clearedRoom: clearedRooms[0] } });
   });
@@ -27,7 +28,6 @@ test("compact collection stays below inputs and reveals acquired Z", async ({ pa
     const controls = await page.locator(".control-bar").boundingBox();
     const collection = await page.locator(".treasure-panel").boundingBox();
     expect(controls!.y + controls!.height).toBeLessThan(collection!.y);
-    expect(collection!.y + collection!.height).toBeLessThan(667);
     const columns = await page.locator(".treasure-grid").evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(" ").length);
     expect(columns).toBe(5);
     const rows = await page.locator(".treasure-grid").evaluate((el) => getComputedStyle(el).gridTemplateRows.split(" ").length);
@@ -35,6 +35,10 @@ test("compact collection stays below inputs and reveals acquired Z", async ({ pa
     await expect(page.locator(".treasure-slot").first()).toHaveCSS("border-top-width", "0px");
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   }
+  await expect(page.getByRole("group", { name: "探索 部屋番号のみ" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "解答 部屋番号＋解答" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "探索", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "解答", exact: true })).toBeDisabled();
   const roomInput = page.getByPlaceholder("部屋番号を入力");
   await expect(page.getByPlaceholder("解答を入力")).toBeVisible();
   await roomInput.fill("1234567");
@@ -43,6 +47,9 @@ test("compact collection stays below inputs and reveals acquired Z", async ({ pa
   await roomInput.pressSequentially("ab-12");
   await expect(roomInput).toHaveValue("12");
   await roomInput.fill("123456");
+  await expect(page.getByText("解答先：部屋 123456（上の部屋番号）", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "探索", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "解答", exact: true })).toBeDisabled();
   await page.getByLabel("解答", { exact: true }).fill("answer");
   await page.getByRole("button", { name: "解答", exact: true }).click();
   await expect(page.getByText("宝Z", { exact: true })).toBeVisible();

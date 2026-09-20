@@ -41,7 +41,8 @@ test("player can explore, answer, and avoid duplicate clears", async ({ page }) 
 
   await page.getByLabel("部屋番号").fill("305");
   await page.getByRole("button", { name: "探索" }).click();
-  await expect(page.getByText("時計の針が示す言葉を読め。")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "部屋 305", exact: true })).toBeVisible();
+  await expect(page.getByText("時計の針が示す言葉を読め。")).toHaveCount(0);
 
   await page.getByRole("button", { name: "探索" }).click();
   await expect(page.getByText(/部屋 305 は探索済み/)).toBeVisible();
