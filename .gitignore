@@ -17,3 +17,5 @@ tsconfig.tsbuildinfo
 .DS_Store
 .next-dev/
 .vercel
+nazo/
+text/
