@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --configLoader runner",
     "test:e2e": "playwright test",
+    "puzzles:upload": "node scripts/upload-puzzle-images-to-storage.mjs",
     "supabase:start": "supabase start",
     "supabase:status": "supabase status",
     "supabase:reset": "supabase db reset",

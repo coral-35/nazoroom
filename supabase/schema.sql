@@ -156,3 +156,23 @@ grant usage, select on all sequences in schema public to service_role;
 
 revoke all on public.room_answers from anon, authenticated;
 revoke all on public.answer_attempts from anon, authenticated;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'puzzle-images',
+  'puzzle-images',
+  true,
+  5242880,
+  array['image/png', 'image/jpeg', 'image/webp', 'image/gif']
+)
+on conflict (id) do update
+set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "Puzzle images are publicly readable" on storage.objects;
+create policy "Puzzle images are publicly readable"
+on storage.objects
+for select
+using (bucket_id = 'puzzle-images');

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
+import { readProblemPayload } from "@/lib/server/problemImageUpload";
 import { getNazoroomService } from "@/lib/server/service";
-import { jsonError, readJsonObject } from "@/lib/server/route";
+import { jsonError } from "@/lib/server/route";
 import { DEFAULT_EVENT_ID } from "@/lib/types/app";
 
 export async function POST(request: Request) {
   try {
-    const body = await readJsonObject(request);
+    const body = await readProblemPayload(request);
     const response = await getNazoroomService().saveAdminProblem(DEFAULT_EVENT_ID, body);
 
     return NextResponse.json(response);

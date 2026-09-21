@@ -21,6 +21,7 @@ type EditableProblem = {
   puzzleImageUrl: string;
   answersText: string;
   isReserve: boolean;
+  imageFile: File | null;
 };
 
 type AssignmentRow = {
@@ -57,15 +58,11 @@ export function AdminRoomEditor({
     setMessage(null);
 
     try {
+      const body = problem.imageFile ? buildProblemFormData(problem) : null;
       const response = await fetch(`${apiBasePath}/problem-bank`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          id: problem.id,
-          roomCode: problem.roomCode,
-          puzzleImageUrl: problem.puzzleImageUrl,
-          answers: problem.answersText.split(/\r?\n/)
-        })
+        headers: body ? undefined : { "content-type": "application/json" },
+        body: body ?? JSON.stringify(problemPayload(problem))
       });
       const data = (await response.json()) as AdminRoomsResponse | { message?: string };
 
@@ -159,7 +156,7 @@ export function AdminRoomEditor({
         </div>
       </div>
       <p className="lead lead--small">
-        謎画像URL、解答、部屋番号を1組として保存します。解答は改行区切りです。
+        謎画像、解答、部屋番号を1組として保存します。解答は改行区切りです。
       </p>
 
       {message ? <p className="message message--notice">{message}</p> : null}
@@ -267,6 +264,15 @@ function ProblemForm({
           />
         </label>
         <label className="field field--full">
+          画像ファイル
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            onChange={(event) => onChange({ imageFile: event.target.files?.[0] ?? null })}
+            className="input"
+          />
+        </label>
+        <label className="field field--full">
           解答（改行区切り）
           <textarea
             value={problem.answersText}
@@ -347,8 +353,31 @@ function toEditableProblem(problem: ProblemBankRecord): EditableProblem {
     roomCode: problem.roomCode,
     puzzleImageUrl: problem.puzzleImageUrl,
     answersText: problem.defaultAnswers.join("\n"),
-    isReserve: problem.isReserve
+    isReserve: problem.isReserve,
+    imageFile: null
   };
+}
+
+function problemPayload(problem: EditableProblem) {
+  return {
+    id: problem.id,
+    roomCode: problem.roomCode,
+    puzzleImageUrl: problem.puzzleImageUrl,
+    answers: problem.answersText.split(/\r?\n/)
+  };
+}
+
+function buildProblemFormData(problem: EditableProblem) {
+  const formData = new FormData();
+  formData.set("id", problem.id);
+  formData.set("roomCode", problem.roomCode);
+  formData.set("puzzleImageUrl", problem.puzzleImageUrl);
+  formData.set("answers", problem.answersText);
+  if (problem.imageFile) {
+    formData.set("image", problem.imageFile);
+  }
+
+  return formData;
 }
 
 function buildAssignments(

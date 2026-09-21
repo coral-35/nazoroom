@@ -80,7 +80,19 @@ http://localhost:3001/results
 - `結果発表`: ランキングAPIと結果画面を公開
 - `リセット`: 参加者、探索履歴、解答履歴、クリア記録を消して未開始に戻す
 - 進行画面: 参加人数、獲得数、参加者ごとの結果を自動更新で確認する
-- 問題編集画面: 部屋番号、表示タイプ、謎文、隠しメッセージ、解答を追加・編集・無効化する
+- 問題編集画面: 部屋番号、謎画像、解答の登録と、採用する問題・宝の割当順を編集する
+
+謎画像はSupabase Storageの `puzzle-images` bucketを正本にします。初回だけ `public/puzzles` の現行画像を取り込む場合は、対象環境の `NEXT_PUBLIC_SUPABASE_URL` と `SUPABASE_SERVICE_ROLE_KEY` を設定して実行します。
+
+```bash
+npm run puzzles:upload
+```
+
+本番用の退避envを使う場合は以下のように指定します。
+
+```bash
+PUZZLE_UPLOAD_ENV_FILE=.env.remote.local npm run puzzles:upload
+```
 
 端末計測は通信遅延の差を吸収しますが、端末時計や `localStorage` を利用者が変更できるため、厳密な不正防止には向きません。サーバーは管理者が `探索を終了` するまで受付を継続します。
 
