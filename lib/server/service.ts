@@ -11,10 +11,11 @@ import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import type {
   AdminEventControlResponse,
   AdminDashboardResponse,
+  AdminAssignmentInput,
+  AdminProblemInput,
   AdminRoomsResponse,
   EventControlAction,
   EventRecord,
-  ExploreType,
   ExploreResponse,
   JoinResponse,
   RankingResponse,
@@ -162,11 +163,7 @@ export function createNazoroomService(
             ...input,
             roomCode: selectedProblem.roomCode,
             normalizedRoomCode: selectedProblem.normalizedRoomCode,
-            exploreType: "show_puzzle" as const,
-            title: selectedProblem.title,
-            puzzleText: null,
             puzzleImageUrl: selectedProblem.puzzleImageUrl,
-            hiddenMessage: null,
             isActive: selectedProblem.isReserve ? false : input.isActive
           }
         : input;
@@ -189,6 +186,42 @@ export function createNazoroomService(
         rooms: await repository.listAdminRooms(eventId),
         problems,
         message: `部屋 ${saved.roomCode} の問題を保存しました。`
+      };
+    },
+
+    async saveAdminProblem(
+      eventId: string,
+      rawProblem: unknown
+    ): Promise<AdminRoomsResponse> {
+      await getExistingEvent(repository, eventId);
+      const problem = await repository.upsertProblem(parseAdminProblemInput(rawProblem));
+
+      return {
+        rooms: await repository.listAdminRooms(eventId),
+        problems: await repository.listProblemBank(),
+        message: `部屋 ${problem.roomCode} の問題登録を保存しました。`
+      };
+    },
+
+    async saveAdminAssignments(
+      eventId: string,
+      rawAssignments: unknown
+    ): Promise<AdminRoomsResponse> {
+      await getExistingEvent(repository, eventId);
+      const problems = await repository.listProblemBank();
+      const problemIds = new Set(problems.map((problem) => problem.id));
+      const assignments = parseAdminAssignments(rawAssignments);
+
+      for (const assignment of assignments) {
+        if (!problemIds.has(assignment.problemId)) {
+          throw new AppError("問題を選択し直してください。", 400);
+        }
+      }
+
+      return {
+        rooms: await repository.saveAssignments(eventId, assignments),
+        problems: await repository.listProblemBank(),
+        message: "表示順と採用状態を保存しました。"
       };
     },
 
@@ -281,7 +314,7 @@ export function createNazoroomService(
         roomId: room.id,
         inputRoomCode,
         normalizedRoomCode,
-        resultType: room.exploreType,
+        resultType: "show_puzzle",
         message
       });
 
@@ -472,20 +505,9 @@ function publicEvent(event: EventRecord, serverNow: Date) {
 }
 
 function publicRoomForExplore(room: RoomRecord): ExploreResponse["room"] {
-  if (room.exploreType === "hidden_clue") {
-    return {
-      roomCode: room.roomCode,
-      title: room.title,
-      displayMode: "hidden"
-    };
-  }
-
   return {
     roomCode: room.roomCode,
-    title: room.title,
-    puzzleText: room.puzzleText,
-    puzzleImageUrl: room.puzzleImageUrl,
-    displayMode: "visible"
+    puzzleImageUrl: room.puzzleImageUrl
   };
 }
 
@@ -529,30 +551,85 @@ function parseAdminRoomInput(
 
   const input = rawRoom as Record<string, unknown>;
   const roomCode = parseRoomCode(input.roomCode);
-  const exploreType = parseExploreType(input.exploreType);
 
   return {
     roomId: parseOptionalText(input.id, 80) ?? undefined,
     problemId: parseOptionalText(input.problemId, 80),
     roomCode,
     normalizedRoomCode: normalizeRoomCode(roomCode),
-    exploreType,
-    title: parseOptionalText(input.title, 120),
-    puzzleText: parseOptionalText(input.puzzleText, 2_000),
     puzzleImageUrl: parseOptionalText(input.puzzleImageUrl, 500),
-    hiddenMessage: parseOptionalText(input.hiddenMessage, 1_000),
     sortOrder: parseSortOrder(input.sortOrder),
     isActive: input.isActive !== false,
     answers: parseAdminAnswers(input.answers)
   };
 }
 
-function parseExploreType(input: unknown): ExploreType {
-  if (input === "show_puzzle" || input === "hidden_clue") {
-    return input;
+function parseAdminProblemInput(rawProblem: unknown): AdminProblemInput {
+  if (!rawProblem || typeof rawProblem !== "object" || Array.isArray(rawProblem)) {
+    throw new AppError("問題の入力内容を確認してください。", 400);
   }
 
-  throw new AppError("表示タイプを選択してください。", 400);
+  const input = rawProblem as Record<string, unknown>;
+  const id = parseRequiredText(input.id, 80);
+  const roomCode = parseRoomCode(input.roomCode);
+  const puzzleImageUrl = parseRequiredText(input.puzzleImageUrl, 500);
+
+  return {
+    id,
+    roomCode,
+    puzzleImageUrl,
+    answers: parseAdminAnswers(input.answers).map((answer) => answer.answerText)
+  };
+}
+
+function parseAdminAssignments(rawAssignments: unknown): AdminAssignmentInput[] {
+  if (!Array.isArray(rawAssignments)) {
+    throw new AppError("表示順の入力内容を確認してください。", 400);
+  }
+
+  const activeAssignments: AdminAssignmentInput[] = [];
+  const inactiveAssignments: AdminAssignmentInput[] = [];
+  const seen = new Set<string>();
+
+  for (const rawAssignment of rawAssignments) {
+    if (!rawAssignment || typeof rawAssignment !== "object" || Array.isArray(rawAssignment)) {
+      throw new AppError("表示順の入力内容を確認してください。", 400);
+    }
+
+    const input = rawAssignment as Record<string, unknown>;
+    const problemId = parseRequiredText(input.problemId, 80);
+    if (seen.has(problemId)) {
+      throw new AppError("同じ問題が複数回含まれています。", 400);
+    }
+    seen.add(problemId);
+
+    const assignment = {
+      problemId,
+      roomId: parseOptionalText(input.roomId, 80) ?? undefined,
+      isActive: input.isActive === true
+    };
+
+    if (assignment.isActive) {
+      activeAssignments.push(assignment);
+    } else {
+      inactiveAssignments.push(assignment);
+    }
+  }
+
+  if (activeAssignments.length > 26) {
+    throw new AppError("有効な問題は26件以内にしてください。", 400);
+  }
+
+  return [...activeAssignments, ...inactiveAssignments];
+}
+
+function parseRequiredText(input: unknown, maxLength: number) {
+  const value = parseOptionalText(input, maxLength);
+  if (!value) {
+    throw new AppError("入力内容を確認してください。", 400);
+  }
+
+  return value;
 }
 
 function parseOptionalText(input: unknown, maxLength: number) {

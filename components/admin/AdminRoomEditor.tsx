@@ -1,10 +1,9 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import type {
-  AdminRoomRecord,
   AdminRoomsResponse,
-  ExploreType,
+  AdminRoomRecord,
   ProblemBankRecord
 } from "@/lib/types/app";
 
@@ -15,21 +14,23 @@ type AdminRoomEditorProps = {
   initialProblems?: ProblemBankRecord[];
 };
 
-type EditableRoom = {
-  id?: string;
-  problemId: string;
+type EditableProblem = {
+  id: string;
+  problemNumber: number;
   roomCode: string;
-  exploreType: ExploreType;
-  title: string;
-  puzzleText: string;
   puzzleImageUrl: string;
-  hiddenMessage: string;
-  sortOrder: string;
-  isActive: boolean;
   answersText: string;
+  isReserve: boolean;
 };
 
-const NEW_ROOM_KEY = "new-room";
+type AssignmentRow = {
+  problemId: string;
+  roomId?: string;
+  roomCode: string;
+  answersText: string;
+  isActive: boolean;
+  isReserve: boolean;
+};
 
 export function AdminRoomEditor({
   eventId,
@@ -37,25 +38,34 @@ export function AdminRoomEditor({
   initialRooms,
   initialProblems = []
 }: AdminRoomEditorProps) {
-  const [rooms, setRooms] = useState(initialRooms.map(toEditableRoom));
-  const [problems] = useState(initialProblems);
-  const [newRoom, setNewRoom] = useState<EditableRoom>(createEmptyRoom());
+  const [problems, setProblems] = useState(initialProblems.map(toEditableProblem));
+  const [assignments, setAssignments] = useState(() =>
+    buildAssignments(initialProblems, initialRooms)
+  );
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
 
-  async function saveRoom(room: EditableRoom, key: string) {
-    setBusyKey(key);
+  const problemById = useMemo(
+    () => new Map(problems.map((problem) => [problem.id, problem])),
+    [problems]
+  );
+
+  async function saveProblem(problem: EditableProblem) {
+    setBusyKey(problem.id);
     setError(null);
     setMessage(null);
 
     try {
-      const response = await fetch(`${apiBasePath}/rooms`, {
+      const response = await fetch(`${apiBasePath}/problem-bank`, {
         method: "POST",
-        headers: {
-          "content-type": "application/json"
-        },
-        body: JSON.stringify(toPayload(room))
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: problem.id,
+          roomCode: problem.roomCode,
+          puzzleImageUrl: problem.puzzleImageUrl,
+          answers: problem.answersText.split(/\r?\n/)
+        })
       });
       const data = (await response.json()) as AdminRoomsResponse | { message?: string };
 
@@ -63,21 +73,81 @@ export function AdminRoomEditor({
         throw new Error("message" in data ? data.message : "問題を保存できませんでした。");
       }
 
-      const result = data as AdminRoomsResponse;
-      setRooms(result.rooms.map(toEditableRoom));
-      setMessage(result.message ?? "問題を保存しました。");
-      if (key === NEW_ROOM_KEY) {
-        setNewRoom(createEmptyRoom());
-      }
+      applyResponse(data as AdminRoomsResponse);
     } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "通信に失敗しました。時間をおいて再試行してください。"
-      );
+      setError(caught instanceof Error ? caught.message : "通信に失敗しました。");
     } finally {
       setBusyKey(null);
     }
+  }
+
+  async function saveAssignments(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusyKey("assignments");
+    setError(null);
+    setMessage(null);
+
+    try {
+      const response = await fetch(`${apiBasePath}/assignments`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(
+          assignments.map((assignment) => ({
+            problemId: assignment.problemId,
+            roomId: assignment.roomId,
+            isActive: assignment.isActive
+          }))
+        )
+      });
+      const data = (await response.json()) as AdminRoomsResponse | { message?: string };
+
+      if (!response.ok) {
+        throw new Error("message" in data ? data.message : "表示順を保存できませんでした。");
+      }
+
+      applyResponse(data as AdminRoomsResponse);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "通信に失敗しました。");
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  function applyResponse(response: AdminRoomsResponse) {
+    const nextProblems = response.problems.map(toEditableProblem);
+    setProblems(nextProblems);
+    setAssignments(buildAssignments(response.problems, response.rooms));
+    setMessage(response.message ?? "保存しました。");
+  }
+
+  function patchProblem(index: number, patch: Partial<EditableProblem>) {
+    setProblems((current) =>
+      current.map((problem, problemIndex) =>
+        problemIndex === index ? { ...problem, ...patch } : problem
+      )
+    );
+  }
+
+  function patchAssignment(index: number, patch: Partial<AssignmentRow>) {
+    setAssignments((current) =>
+      current.map((assignment, assignmentIndex) =>
+        assignmentIndex === index ? { ...assignment, ...patch } : assignment
+      )
+    );
+  }
+
+  function moveAssignment(index: number, delta: -1 | 1) {
+    setAssignments((current) => {
+      const nextIndex = index + delta;
+      if (nextIndex < 0 || nextIndex >= current.length) {
+        return current;
+      }
+
+      const next = [...current];
+      const [row] = next.splice(index, 1);
+      next.splice(nextIndex, 0, row);
+      return next;
+    });
   }
 
   return (
@@ -85,290 +155,242 @@ export function AdminRoomEditor({
       <div className="panel-header">
         <div>
           <p className="kicker">問題DB</p>
-          <h2 className="card-title">問題・解答を編集</h2>
+          <h2 className="card-title">問題登録</h2>
         </div>
       </div>
       <p className="lead lead--small">
-        部屋番号、表示内容、正解を保存します。解答は改行区切りで複数登録できます。
+        謎画像URL、解答、部屋番号を1組として保存します。解答は改行区切りです。
       </p>
 
-      {message ? (
-        <p className="message message--notice">
-          {message}
-        </p>
-      ) : null}
-      {error ? (
-        <p className="message message--error">
-          {error}
-        </p>
-      ) : null}
+      {message ? <p className="message message--notice">{message}</p> : null}
+      {error ? <p className="message message--error">{error}</p> : null}
 
       <div className="admin-room-list">
-        {rooms.map((room, index) => (
-          <RoomForm
-            key={room.id}
-            title={`部屋 ${room.roomCode || "未設定"}`}
-            room={room}
-            busy={busyKey === room.id}
-            problems={problems}
-            onChange={(patch) =>
-              setRooms((current) =>
-                current.map((item, itemIndex) =>
-                  itemIndex === index ? { ...item, ...patch } : item
-                )
-              )
-            }
-            onSave={(nextRoom) => saveRoom(nextRoom, room.id ?? String(index))}
+        {problems.map((problem, index) => (
+          <ProblemForm
+            key={problem.id}
+            problem={problem}
+            busy={busyKey === problem.id}
+            onChange={(patch) => patchProblem(index, patch)}
+            onSave={() => saveProblem(problem)}
           />
         ))}
-
-        <RoomForm
-          title="新しい問題を追加"
-          room={newRoom}
-          busy={busyKey === NEW_ROOM_KEY}
-          problems={problems}
-          onChange={(patch) => setNewRoom((current) => ({ ...current, ...patch }))}
-          onSave={(nextRoom) => saveRoom(nextRoom, NEW_ROOM_KEY)}
-        />
       </div>
+
+      <form className="panel section-gap" onSubmit={saveAssignments}>
+        <div className="panel-header">
+          <div>
+            <p className="kicker">採用設定</p>
+            <h2 className="card-title">表示順と宝の割当</h2>
+          </div>
+          <button
+            type="submit"
+            className="button button--primary button--compact"
+            disabled={busyKey === "assignments"}
+          >
+            {busyKey === "assignments" ? "保存中..." : "一括確定"}
+          </button>
+        </div>
+        <div className="admin-room-list">
+          {assignments.map((assignment, index) => {
+            const activeOrder = assignment.isActive
+              ? assignments.slice(0, index + 1).filter((row) => row.isActive).length
+              : 0;
+            const problem = problemById.get(assignment.problemId);
+
+            return (
+              <AssignmentForm
+                key={assignment.problemId}
+                row={{
+                  ...assignment,
+                  roomCode: problem?.roomCode ?? assignment.roomCode,
+                  answersText: problem?.answersText ?? assignment.answersText
+                }}
+                index={index}
+                activeOrder={activeOrder}
+                onChange={(patch) => patchAssignment(index, patch)}
+                onMove={moveAssignment}
+              />
+            );
+          })}
+        </div>
+      </form>
     </section>
   );
 }
 
-type RoomFormProps = {
-  title: string;
-  room: EditableRoom;
+function ProblemForm({
+  problem,
+  busy,
+  onChange,
+  onSave
+}: {
+  problem: EditableProblem;
   busy: boolean;
-  problems: ProblemBankRecord[];
-  onChange: (patch: Partial<EditableRoom>) => void;
-  onSave: (room: EditableRoom) => void;
-};
-
-function RoomForm({ title, room, busy, problems, onChange, onSave }: RoomFormProps) {
-  const selectedProblem = problems.find((problem) => problem.id === room.problemId);
-  const isReserve = selectedProblem?.isReserve === true;
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    onSave(isReserve ? { ...room, isActive: false } : room);
-  }
-
+  onChange: (patch: Partial<EditableProblem>) => void;
+  onSave: () => void;
+}) {
   return (
-    <form className="admin-room-card" onSubmit={handleSubmit}>
+    <form
+      className="admin-room-card"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSave();
+      }}
+    >
       <div className="card-header">
         <div>
-          <p className="kicker">{isReserve ? "予備" : room.isActive ? "公開中" : "無効"}</p>
-          <h3 className="card-title">
-            {title} / {isReserve ? "宝未割当" : treasureLabel(room.sortOrder)}
-          </h3>
+          <p className="kicker">{problem.isReserve ? "予備" : `問題 ${problem.problemNumber}`}</p>
+          <h3 className="card-title">部屋 {problem.roomCode || "未設定"}</h3>
         </div>
-        <label className="checkbox-field">
-          <input
-            type="checkbox"
-            checked={!isReserve && room.isActive}
-            disabled={isReserve}
-            onChange={(event) => onChange({ isActive: event.target.checked })}
-          />
-          有効
-        </label>
+        <button type="submit" className="button button--primary button--compact" disabled={busy}>
+          {busy ? "保存中..." : "保存"}
+        </button>
       </div>
-
       <div className="admin-room-fields">
-        <label className="field">
-          問題
-          <select
-            value={room.problemId}
-            onChange={(event) => {
-              const problem = problems.find((item) => item.id === event.target.value);
-              onChange(
-                problem
-                  ? {
-                      problemId: problem.id,
-                      roomCode: problem.roomCode,
-                      exploreType: "show_puzzle",
-                      title: problem.title ?? `問題 ${problem.problemNumber}`,
-                      puzzleText: "",
-                      puzzleImageUrl: problem.puzzleImageUrl,
-                      hiddenMessage: "",
-                      isActive: !problem.isReserve,
-                      answersText: problem.defaultAnswers.join("\n")
-                    }
-                  : { problemId: "" }
-              );
-            }}
-            className="input"
-          >
-            <option value="">手入力</option>
-            {problems.map((problem) => (
-              <option key={problem.id} value={problem.id}>
-                {problem.problemNumber}. 部屋 {problem.roomCode}
-                {problem.isReserve ? "（予備）" : ""}
-              </option>
-            ))}
-          </select>
-        </label>
         <label className="field">
           部屋番号
           <input
-            value={room.roomCode}
+            value={problem.roomCode}
             onChange={(event) => onChange({ roomCode: event.target.value })}
             className="input"
             placeholder="305"
-            disabled={Boolean(room.problemId)}
-          />
-        </label>
-        <label className="field">
-          表示タイプ
-          <select
-            value={room.exploreType}
-            onChange={(event) =>
-              onChange({ exploreType: event.target.value as ExploreType })
-            }
-            className="input"
-            disabled={Boolean(room.problemId)}
-          >
-            <option value="show_puzzle">画面に謎を表示</option>
-            <option value="hidden_clue">現地探索のみ</option>
-          </select>
-        </label>
-        <label className="field">
-          表示順
-          <input
-            type="number"
-            min={0}
-            max={9999}
-            value={room.sortOrder}
-            onChange={(event) => onChange({ sortOrder: event.target.value })}
-            className="input"
-          />
-        </label>
-        <label className="field field--full">
-          タイトル
-          <input
-            value={room.title}
-            onChange={(event) => onChange({ title: event.target.value })}
-            className="input"
-            placeholder="古びた時計の暗号"
-            disabled={Boolean(room.problemId)}
-          />
-        </label>
-        <label className="field field--full">
-          謎文
-          <textarea
-            value={room.puzzleText}
-            onChange={(event) => onChange({ puzzleText: event.target.value })}
-            className="input input--textarea"
-            disabled={Boolean(room.problemId)}
           />
         </label>
         <label className="field field--full">
           画像URL
           <input
-            value={room.puzzleImageUrl}
+            value={problem.puzzleImageUrl}
             onChange={(event) => onChange({ puzzleImageUrl: event.target.value })}
             className="input"
-            placeholder="https://..."
-            disabled={Boolean(room.problemId)}
-          />
-        </label>
-        <label className="field field--full">
-          隠しメッセージ
-          <textarea
-            value={room.hiddenMessage}
-            onChange={(event) => onChange({ hiddenMessage: event.target.value })}
-            className="input input--textarea"
-            disabled={Boolean(room.problemId)}
+            placeholder="/puzzles/frame-01.png"
           />
         </label>
         <label className="field field--full">
           解答（改行区切り）
           <textarea
-            value={room.answersText}
+            value={problem.answersText}
             onChange={(event) => onChange({ answersText: event.target.value })}
             className="input input--textarea"
             placeholder={"ひかり\nヒカリ"}
           />
         </label>
-        {room.puzzleImageUrl ? (
+        {problem.puzzleImageUrl ? (
           <div className="admin-problem-preview field--full">
-            <img src={room.puzzleImageUrl} alt="" />
+            <img src={problem.puzzleImageUrl} alt="" />
           </div>
         ) : null}
-      </div>
-
-      <div className="button-grid">
-        <button type="submit" className="button button--primary" disabled={busy}>
-          {busy ? "保存中..." : "保存"}
-        </button>
-        <button
-          type="button"
-          className="button button--secondary"
-          disabled={busy || !room.id || !room.isActive}
-          onClick={() => {
-            const nextRoom = { ...room, isActive: false };
-            onChange({ isActive: false });
-            onSave(nextRoom);
-          }}
-        >
-          無効化して保存
-        </button>
       </div>
     </form>
   );
 }
 
-function treasureLabel(sortOrder: string) {
-  const order = Number(sortOrder);
+function AssignmentForm({
+  row,
+  index,
+  activeOrder,
+  onChange,
+  onMove
+}: {
+  row: AssignmentRow;
+  index: number;
+  activeOrder: number;
+  onChange: (patch: Partial<AssignmentRow>) => void;
+  onMove: (index: number, delta: -1 | 1) => void;
+}) {
+  return (
+    <div className="admin-room-card">
+      <div className="card-header">
+        <div>
+          <p className="kicker">{row.isActive ? treasureLabel(activeOrder) : "未採用"}</p>
+          <h3 className="card-title">部屋 {row.roomCode}</h3>
+        </div>
+        <label className="checkbox-field">
+          <input
+            type="checkbox"
+            checked={row.isActive}
+            disabled={row.isReserve}
+            onChange={(event) => onChange({ isActive: event.target.checked })}
+          />
+          採用
+        </label>
+      </div>
+      <div className="admin-room-fields">
+        <label className="field">
+          部屋番号
+          <input value={row.roomCode} className="input" readOnly />
+        </label>
+        <label className="field field--full">
+          解答
+          <textarea value={row.answersText} className="input input--textarea" readOnly />
+        </label>
+      </div>
+      <div className="button-grid">
+        <button
+          type="button"
+          className="button button--secondary"
+          onClick={() => onMove(index, -1)}
+        >
+          上へ
+        </button>
+        <button
+          type="button"
+          className="button button--secondary"
+          onClick={() => onMove(index, 1)}
+        >
+          下へ
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function toEditableProblem(problem: ProblemBankRecord): EditableProblem {
+  return {
+    id: problem.id,
+    problemNumber: problem.problemNumber,
+    roomCode: problem.roomCode,
+    puzzleImageUrl: problem.puzzleImageUrl,
+    answersText: problem.defaultAnswers.join("\n"),
+    isReserve: problem.isReserve
+  };
+}
+
+function buildAssignments(
+  problems: ProblemBankRecord[],
+  rooms: AdminRoomRecord[]
+): AssignmentRow[] {
+  const roomByProblemId = new Map(
+    rooms
+      .filter((room) => room.problemId)
+      .map((room) => [room.problemId as string, room])
+  );
+
+  return [...problems]
+    .sort((a, b) => {
+      const roomA = roomByProblemId.get(a.id);
+      const roomB = roomByProblemId.get(b.id);
+      const orderA = roomA?.isActive ? roomA.sortOrder : Number.MAX_SAFE_INTEGER;
+      const orderB = roomB?.isActive ? roomB.sortOrder : Number.MAX_SAFE_INTEGER;
+      return orderA - orderB || a.problemNumber - b.problemNumber;
+    })
+    .map((problem) => {
+      const room = roomByProblemId.get(problem.id);
+      return {
+        problemId: problem.id,
+        roomId: room?.id,
+        roomCode: problem.roomCode,
+        answersText: problem.defaultAnswers.join("\n"),
+        isActive: room?.isActive ?? !problem.isReserve,
+        isReserve: problem.isReserve
+      };
+    });
+}
+
+function treasureLabel(order: number) {
   if (!Number.isInteger(order) || order < 1 || order > 26) {
     return "宝未割当";
   }
 
   return `宝${String.fromCharCode(64 + order)}`;
-}
-
-function toEditableRoom(room: AdminRoomRecord): EditableRoom {
-  return {
-    id: room.id,
-    problemId: room.problemId ?? "",
-    roomCode: room.roomCode,
-    exploreType: room.exploreType,
-    title: room.title ?? "",
-    puzzleText: room.puzzleText ?? "",
-    puzzleImageUrl: room.puzzleImageUrl ?? "",
-    hiddenMessage: room.hiddenMessage ?? "",
-    sortOrder: String(room.sortOrder),
-    isActive: room.isActive,
-    answersText: room.answers.map((answer) => answer.answerText).join("\n")
-  };
-}
-
-function createEmptyRoom(): EditableRoom {
-  return {
-    problemId: "",
-    roomCode: "",
-    exploreType: "show_puzzle",
-    title: "",
-    puzzleText: "",
-    puzzleImageUrl: "",
-    hiddenMessage: "",
-    sortOrder: "100",
-    isActive: true,
-    answersText: ""
-  };
-}
-
-function toPayload(room: EditableRoom) {
-  return {
-    id: room.id,
-    problemId: room.problemId || null,
-    roomCode: room.roomCode,
-    exploreType: room.exploreType,
-    title: room.title,
-    puzzleText: room.puzzleText,
-    puzzleImageUrl: room.puzzleImageUrl,
-    hiddenMessage: room.hiddenMessage,
-    sortOrder: room.sortOrder,
-    isActive: room.isActive,
-    answers: room.answersText.split(/\r?\n/)
-  };
 }

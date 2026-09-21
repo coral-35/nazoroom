@@ -14,8 +14,8 @@ test("explored rooms remain available with full 800 by 600 puzzles", async ({ pa
     expect(route.request().postDataJSON()).toEqual({ playerId: "display-player", roomCode });
     const card: ExploredRoomCard = {
       logId: roomCode, roomCode, createdAt: new Date().toISOString(),
-      resultType: roomCode === "204" ? "hidden_clue" : "show_puzzle",
-      message: "削除した部屋の説明", puzzleText: "謎本文", puzzleImageUrl: roomCode === "307" ? undefined : puzzleImage,
+      resultType: "show_puzzle",
+      message: "削除した部屋の説明", puzzleImageUrl: roomCode === "307" ? undefined : puzzleImage,
       cleared: roomCode === "306"
     };
     cards.push(card);
@@ -37,7 +37,7 @@ test("explored rooms remain available with full 800 by 600 puzzles", async ({ pa
   await expect(page.getByText("削除した部屋の説明")).toHaveCount(0);
   await expect(page.getByText("謎本文", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("article", { name: "部屋 307 の謎", exact: true }).locator("img")).toHaveCount(0);
-  await expect(page.getByRole("article", { name: "部屋 204 の謎", exact: true }).locator("img")).toHaveCount(0);
+  await expect(page.getByRole("article", { name: "部屋 204 の謎", exact: true }).locator("img")).toHaveCount(1);
   await expect(page.getByRole("article", { name: "部屋 306 の謎", exact: true }).getByText("クリア済み")).toHaveCount(1);
   const image = page.getByRole("img", { name: "部屋 305 の謎画像", exact: true });
   for (const width of [320, 393, 1024]) {

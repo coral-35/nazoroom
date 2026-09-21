@@ -1,7 +1,7 @@
 import type {
+  AdminAssignmentInput,
   ExploredRoomCard,
   ExplorationLogRecord,
-  ExploreResultType,
   PlayerRecord,
   PlayerClearRecord,
   RoomAnswerRecord,
@@ -10,7 +10,7 @@ import type {
   AnswerResult,
   EventRecord
 } from "@/lib/types/app";
-import type { AdminRoomRecord, ExploreType, ProblemBankRecord } from "@/lib/types/app";
+import type { AdminProblemInput, AdminRoomRecord, ProblemBankRecord } from "@/lib/types/app";
 
 export type CreateExplorationLogInput = {
   eventId: string;
@@ -18,7 +18,7 @@ export type CreateExplorationLogInput = {
   roomId: string | null;
   inputRoomCode: string;
   normalizedRoomCode: string;
-  resultType: ExploreResultType;
+  resultType: "not_found" | "show_puzzle";
   message: string;
 };
 
@@ -53,11 +53,7 @@ export type UpsertRoomInput = {
   problemId: string | null;
   roomCode: string;
   normalizedRoomCode: string;
-  exploreType: ExploreType;
-  title: string | null;
-  puzzleText: string | null;
   puzzleImageUrl: string | null;
-  hiddenMessage: string | null;
   sortOrder: number;
   isActive: boolean;
   answers: {
@@ -95,7 +91,9 @@ export type NazoroomRepository = {
   listRooms(eventId: string): Promise<RoomRecord[]>;
   listAdminRooms(eventId: string): Promise<AdminRoomRecord[]>;
   listProblemBank(): Promise<ProblemBankRecord[]>;
+  upsertProblem(input: AdminProblemInput): Promise<ProblemBankRecord>;
   upsertRoom(input: UpsertRoomInput): Promise<AdminRoomRecord>;
+  saveAssignments(eventId: string, assignments: AdminAssignmentInput[]): Promise<AdminRoomRecord[]>;
   listAllClears(eventId: string): Promise<PlayerClearRecord[]>;
 };
 
@@ -108,12 +106,9 @@ export function buildExploredRoomCard(input: {
   return {
     logId: log.id,
     roomCode: room?.roomCode ?? log.inputRoomCode,
-    resultType: log.resultType,
-    title: room?.title ?? undefined,
+    resultType: log.resultType === "not_found" ? "not_found" : "show_puzzle",
     message: log.message,
-    puzzleText: log.resultType === "show_puzzle" ? room?.puzzleText ?? undefined : undefined,
-    puzzleImageUrl:
-      log.resultType === "show_puzzle" ? room?.puzzleImageUrl ?? undefined : undefined,
+    puzzleImageUrl: room?.puzzleImageUrl ?? undefined,
     createdAt: log.createdAt,
     cleared
   };

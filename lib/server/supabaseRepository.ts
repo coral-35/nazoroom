@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sortExploredRoomCards } from "@/lib/domain/explorationCards";
+import { normalizeAnswer, normalizeRoomCode } from "@/lib/domain/normalize";
 import type {
   EventRecord,
   ExplorationLogRecord,
@@ -359,8 +360,64 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
       return (data ?? []).map(mapProblemBank);
     },
 
+    async upsertProblem(input) {
+      const normalizedRoomCode = normalizeRoomCode(input.roomCode);
+      const { data, error } = await client
+        .from("problem_bank")
+        .update({
+          room_code: input.roomCode,
+          normalized_room_code: normalizedRoomCode,
+          puzzle_image_url: input.puzzleImageUrl,
+          default_answers: input.answers
+        })
+        .eq("id", input.id)
+        .select("*")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return mapProblemBank(data);
+    },
+
     async upsertRoom(input) {
       return upsertRoomRow(client, input);
+    },
+
+    async saveAssignments(eventId, assignments) {
+      const problems = await this.listProblemBank();
+      const currentRooms = await this.listAdminRooms(eventId);
+      let sortOrder = 1;
+
+      for (const assignment of assignments) {
+        const problem = problems.find((item) => item.id === assignment.problemId);
+        if (!problem) {
+          continue;
+        }
+
+        const currentRoom =
+          currentRooms.find((room) => room.problemId === problem.id) ??
+          currentRooms.find((room) => room.id === assignment.roomId);
+        const isActive = assignment.isActive && !problem.isReserve;
+
+        await upsertRoomRow(client, {
+          eventId,
+          roomId: currentRoom?.id,
+          problemId: problem.id,
+          roomCode: problem.roomCode,
+          normalizedRoomCode: problem.normalizedRoomCode,
+          puzzleImageUrl: problem.puzzleImageUrl,
+          sortOrder: isActive ? sortOrder++ : 0,
+          isActive,
+          answers: problem.defaultAnswers.map((answer) => ({
+            answerText: answer,
+            normalizedAnswer: normalizeAnswer(answer)
+          }))
+        });
+      }
+
+      return this.listAdminRooms(eventId);
     },
 
     async listAllClears(eventId) {
@@ -430,11 +487,11 @@ async function upsertRoomRow(client: SupabaseClient, input: UpsertRoomInput) {
     problem_id: input.problemId,
     room_code: input.roomCode,
     normalized_room_code: input.normalizedRoomCode,
-    explore_type: input.exploreType,
-    title: input.title,
-    puzzle_text: input.puzzleText,
+    explore_type: "show_puzzle",
+    title: null,
+    puzzle_text: null,
     puzzle_image_url: input.puzzleImageUrl,
-    hidden_message: input.hiddenMessage,
+    hidden_message: null,
     sort_order: input.sortOrder,
     is_active: input.isActive
   };
@@ -523,11 +580,7 @@ function mapRoom(row: any): RoomRecord {
     problemId: row.problem_id ?? null,
     roomCode: row.room_code,
     normalizedRoomCode: row.normalized_room_code,
-    exploreType: row.explore_type,
-    title: row.title,
-    puzzleText: row.puzzle_text,
     puzzleImageUrl: row.puzzle_image_url,
-    hiddenMessage: row.hidden_message,
     sortOrder: row.sort_order,
     isActive: row.is_active,
     createdAt: row.created_at,
@@ -541,7 +594,6 @@ function mapProblemBank(row: any): ProblemBankRecord {
     problemNumber: row.problem_number,
     roomCode: row.room_code,
     normalizedRoomCode: row.normalized_room_code,
-    title: row.title,
     puzzleImageUrl: row.puzzle_image_url,
     defaultAnswers: Array.isArray(row.default_answers) ? row.default_answers : [],
     isReserve: row.is_reserve === true,

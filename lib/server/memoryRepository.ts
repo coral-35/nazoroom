@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { DEFAULT_EVENT_ID } from "@/lib/types/app";
 import { sortExploredRoomCards } from "@/lib/domain/explorationCards";
+import { normalizeAnswer, normalizeRoomCode } from "@/lib/domain/normalize";
 import type {
   EventRecord,
   ExplorationLogRecord,
@@ -68,11 +69,7 @@ export function createSeedMemoryState(now: Date = new Date()): MemoryState {
         problemId: PROBLEM_001_ID,
         roomCode: "305",
         normalizedRoomCode: "305",
-        exploreType: "show_puzzle",
-        title: "古びた時計の暗号",
-        puzzleText: "時計の針が示す言葉を読め。",
         puzzleImageUrl: "/puzzles/frame-01.png",
-        hiddenMessage: null,
         sortOrder: 1,
         isActive: true,
         createdAt,
@@ -84,11 +81,7 @@ export function createSeedMemoryState(now: Date = new Date()): MemoryState {
         problemId: PROBLEM_002_ID,
         roomCode: "204",
         normalizedRoomCode: "204",
-        exploreType: "hidden_clue",
-        title: "現地探索型の謎",
-        puzzleText: null,
-        puzzleImageUrl: null,
-        hiddenMessage: "部屋204の周囲に、画面には映らない違和感がある。",
+        puzzleImageUrl: "/puzzles/frame-02.png",
         sortOrder: 2,
         isActive: true,
         createdAt,
@@ -100,11 +93,7 @@ export function createSeedMemoryState(now: Date = new Date()): MemoryState {
         problemId: PROBLEM_003_ID,
         roomCode: "101",
         normalizedRoomCode: "101",
-        exploreType: "show_puzzle",
-        title: "封筒の記号",
-        puzzleText: "封筒に描かれた線を順にたどれ。",
         puzzleImageUrl: "/puzzles/frame-03.png",
-        hiddenMessage: null,
         sortOrder: 3,
         isActive: true,
         createdAt,
@@ -333,6 +322,27 @@ export function createMemoryRepository(
       return [...state.problemBank].sort((a, b) => a.problemNumber - b.problemNumber);
     },
 
+    async upsertProblem(input) {
+      readLatest();
+      const index = state.problemBank.findIndex((problem) => problem.id === input.id);
+      if (index === -1) {
+        throw new Error("Problem not found.");
+      }
+
+      const current = state.problemBank[index];
+      const next: ProblemBankRecord = {
+        ...current,
+        roomCode: input.roomCode,
+        normalizedRoomCode: normalizeRoomCode(input.roomCode),
+        puzzleImageUrl: input.puzzleImageUrl,
+        defaultAnswers: input.answers,
+        updatedAt: new Date().toISOString()
+      };
+      state.problemBank[index] = next;
+      persist();
+      return next;
+    },
+
     async upsertRoom(input) {
       readLatest();
       const room = upsertMemoryRoom(input);
@@ -350,6 +360,51 @@ export function createMemoryRepository(
       );
       persist();
       return buildAdminRoom(room);
+    },
+
+    async saveAssignments(eventId, assignments) {
+      readLatest();
+      let sortOrder = 1;
+
+      for (const assignment of assignments) {
+        const problem = state.problemBank.find((item) => item.id === assignment.problemId);
+        if (!problem) {
+          continue;
+        }
+
+        const currentRoom =
+          state.rooms.find(
+            (room) => room.eventId === eventId && room.problemId === problem.id
+          ) ??
+          state.rooms.find(
+            (room) => room.eventId === eventId && room.id === assignment.roomId
+          );
+        const isActive = assignment.isActive && !problem.isReserve;
+        const room = upsertMemoryRoom({
+          eventId,
+          roomId: currentRoom?.id,
+          problemId: problem.id,
+          roomCode: problem.roomCode,
+          normalizedRoomCode: problem.normalizedRoomCode,
+          puzzleImageUrl: problem.puzzleImageUrl,
+          sortOrder: isActive ? sortOrder++ : 0,
+          isActive,
+          answers: problem.defaultAnswers.map((answer) => ({
+            answerText: answer,
+            normalizedAnswer: normalizeAnswer(answer)
+          }))
+        });
+
+        state.roomAnswers = state.roomAnswers.filter((answer) => answer.roomId !== room.id);
+        state.roomAnswers.push(
+          ...problem.defaultAnswers.map((answer) =>
+            createAnswer(room.id, answer, normalizeAnswer(answer), new Date().toISOString())
+          )
+        );
+      }
+
+      persist();
+      return buildAdminRooms(eventId);
     },
 
     async listAllClears(eventId) {
@@ -410,11 +465,7 @@ export function createMemoryRepository(
         problemId: input.problemId,
         roomCode: input.roomCode,
         normalizedRoomCode: input.normalizedRoomCode,
-        exploreType: input.exploreType,
-        title: input.title,
-        puzzleText: input.puzzleText,
         puzzleImageUrl: input.puzzleImageUrl,
-        hiddenMessage: input.hiddenMessage,
         sortOrder: input.sortOrder,
         isActive: input.isActive,
         updatedAt: now
@@ -429,11 +480,7 @@ export function createMemoryRepository(
       problemId: input.problemId,
       roomCode: input.roomCode,
       normalizedRoomCode: input.normalizedRoomCode,
-      exploreType: input.exploreType,
-      title: input.title,
-      puzzleText: input.puzzleText,
       puzzleImageUrl: input.puzzleImageUrl,
-      hiddenMessage: input.hiddenMessage,
       sortOrder: input.sortOrder,
         isActive: input.isActive,
       createdAt: now,
@@ -473,7 +520,6 @@ function createProblemBank(createdAt: string): ProblemBankRecord[] {
       special?.id ?? `20000000-0000-0000-0000-${String(problemNumber).padStart(12, "0")}`,
       problemNumber,
       special?.roomCode ?? String(problemNumber),
-      `問題 ${problemNumber}`,
       `/puzzles/frame-${String(problemNumber).padStart(2, "0")}.png`,
       special?.answers ?? [`答え${problemNumber}`],
       createdAt
@@ -485,7 +531,6 @@ function createProblem(
   id: string,
   problemNumber: number,
   roomCode: string,
-  title: string,
   puzzleImageUrl: string,
   defaultAnswers: string[],
   createdAt: string
@@ -495,7 +540,6 @@ function createProblem(
     problemNumber,
     roomCode,
     normalizedRoomCode: roomCode,
-    title,
     puzzleImageUrl,
     defaultAnswers,
     isReserve: problemNumber === 27,

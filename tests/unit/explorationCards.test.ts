@@ -30,7 +30,6 @@ function makeCard(
     logId,
     roomCode,
     resultType: "show_puzzle",
-    title: `部屋 ${roomCode}`,
     message: `${roomCode} found`,
     createdAt,
     cleared

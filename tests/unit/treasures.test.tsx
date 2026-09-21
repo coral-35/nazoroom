@@ -33,13 +33,12 @@ describe("treasure collection", () => {
     expect(html).not.toContain("宝B");
   });
 
-  it("does not render hidden room details", () => {
+  it("does not render room messages inside puzzle cards", () => {
     const html = renderToStaticMarkup(createElement(PuzzleCard, { card: {
-      logId: "hidden", roomCode: "204", resultType: "hidden_clue",
-      title: "部屋の詳細", message: "違和感がある", createdAt: "2026-09-20"
+      logId: "visible", roomCode: "204", resultType: "show_puzzle",
+      message: "違和感がある", createdAt: "2026-09-20"
     } }));
     expect(html).toContain("部屋 204");
-    expect(html).not.toContain("部屋の詳細");
     expect(html).not.toContain("違和感");
   });
 });

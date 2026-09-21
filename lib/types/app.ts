@@ -6,8 +6,7 @@ export type EventControlAction =
   | "close_exploration"
   | "publish_results"
   | "reset";
-export type ExploreType = "hidden_clue" | "show_puzzle";
-export type ExploreResultType = "not_found" | ExploreType;
+export type ExploreResultType = "not_found" | "show_puzzle";
 export type AnswerResult =
   | "correct"
   | "incorrect"
@@ -39,11 +38,7 @@ export type RoomRecord = {
   problemId: string | null;
   roomCode: string;
   normalizedRoomCode: string;
-  exploreType: ExploreType;
-  title: string | null;
-  puzzleText: string | null;
   puzzleImageUrl: string | null;
-  hiddenMessage: string | null;
   sortOrder: number;
   isActive: boolean;
   createdAt?: string;
@@ -55,7 +50,6 @@ export type ProblemBankRecord = {
   problemNumber: number;
   roomCode: string;
   normalizedRoomCode: string;
-  title: string | null;
   puzzleImageUrl: string;
   defaultAnswers: string[];
   isReserve: boolean;
@@ -113,9 +107,7 @@ export type ExploredRoomCard = {
   logId: string;
   roomCode: string;
   resultType: ExploreResultType;
-  title?: string;
   message: string;
-  puzzleText?: string;
   puzzleImageUrl?: string;
   createdAt: string;
   cleared?: boolean;
@@ -170,6 +162,19 @@ export type AdminEventControlResponse = {
   message: string;
 };
 
+export type AdminProblemInput = {
+  id: string;
+  roomCode: string;
+  puzzleImageUrl: string;
+  answers: string[];
+};
+
+export type AdminAssignmentInput = {
+  problemId: string;
+  roomId?: string;
+  isActive: boolean;
+};
+
 export type AdminDashboardResponse = {
   event: PublicEvent;
   totalPlayers: number;
@@ -189,10 +194,7 @@ export type ExploreResponse = {
   alreadyExplored: boolean;
   room: null | {
     roomCode: string;
-    title: string | null;
-    puzzleText?: string | null;
     puzzleImageUrl?: string | null;
-    displayMode: "hidden" | "visible";
   };
   card: ExploredRoomCard | null;
 };

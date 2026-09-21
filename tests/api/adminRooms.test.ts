@@ -15,11 +15,7 @@ describe("admin room service", () => {
     await service.saveAdminRoom(DEFAULT_EVENT_ID, {
       id: room?.id,
       roomCode: "305",
-      exploreType: "show_puzzle",
-      title: "更新された時計の暗号",
-      puzzleText: "新しい針の向きを読め。",
       puzzleImageUrl: "",
-      hiddenMessage: "",
       sortOrder: 1,
       isActive: true,
       answers: ["あたらしいひかり"]
@@ -49,11 +45,7 @@ describe("admin room service", () => {
 
     await service.saveAdminRoom(DEFAULT_EVENT_ID, {
       roomCode: "777",
-      exploreType: "show_puzzle",
-      title: "新しい部屋",
-      puzzleText: "追加された問題。",
       puzzleImageUrl: "",
-      hiddenMessage: "",
       sortOrder: 10,
       isActive: true,
       answers: ["なな"]
@@ -68,47 +60,63 @@ describe("admin room service", () => {
       "ナナ"
     );
 
-    expect(explored.room?.title).toBe("新しい部屋");
+    expect(explored.room?.roomCode).toBe("777");
     expect(answered.result).toBe("correct");
     expect(answered.clearedRoom?.roomCode).toBe("777");
   });
 
-  it("selects a problem from the bank and keeps editable answers", async () => {
+  it("updates problem bank rows and uses them in assignment saves", async () => {
     const service = makeService();
     const initial = await service.listAdminRooms(DEFAULT_EVENT_ID);
     const problem = initial.problems.find((item) => item.problemNumber === 3);
-    const room = initial.rooms.find((item) => item.roomCode === "101");
     expect(initial.problems).toHaveLength(27);
     expect(problem).toBeTruthy();
 
-    await service.saveAdminRoom(DEFAULT_EVENT_ID, {
-      id: room?.id,
-      problemId: problem?.id,
-      roomCode: "999",
-      exploreType: "show_puzzle",
-      title: "手入力より問題マスタが優先",
-      puzzleText: "表示しない",
-      puzzleImageUrl: "",
-      hiddenMessage: "",
-      sortOrder: 4,
-      isActive: true,
+    await service.saveAdminProblem(DEFAULT_EVENT_ID, {
+      id: problem?.id,
+      roomCode: "303",
+      puzzleImageUrl: "/puzzles/frame-03.png",
       answers: ["マスタから選んだ答え"]
     });
+    await service.saveAdminAssignments(DEFAULT_EVENT_ID, [
+      { problemId: initial.problems[0]?.id, isActive: true },
+      { problemId: problem?.id, isActive: true }
+    ]);
+
+    const afterSave = await service.listAdminRooms(DEFAULT_EVENT_ID);
+    const assignedRoom = afterSave.rooms.find((item) => item.problemId === problem?.id);
+    expect(assignedRoom?.sortOrder).toBe(2);
 
     const joined = await service.joinEvent(DEFAULT_EVENT_ID, "問題選択確認");
-    const explored = await service.explore(DEFAULT_EVENT_ID, joined.player.id, "101");
-    const wrongRoom = await service.explore(DEFAULT_EVENT_ID, joined.player.id, "999");
+    const explored = await service.explore(DEFAULT_EVENT_ID, joined.player.id, "303");
     const answered = await service.answer(
       DEFAULT_EVENT_ID,
       joined.player.id,
-      "101",
+      "303",
       "マスタから選んだ答え"
     );
 
     expect(explored.room?.puzzleImageUrl).toBe("/puzzles/frame-03.png");
-    expect(wrongRoom.resultType).toBe("not_found");
     expect(answered.result).toBe("correct");
-    expect(answered.clearedRoom?.treasureName).toBe("宝D");
+    expect(answered.clearedRoom?.treasureName).toBe("宝B");
+  });
+
+  it("assigns treasures to active rooms from top to bottom", async () => {
+    const service = makeService();
+    const initial = await service.listAdminRooms(DEFAULT_EVENT_ID);
+    const problem1 = initial.problems.find((item) => item.problemNumber === 1);
+    const problem2 = initial.problems.find((item) => item.problemNumber === 2);
+
+    await service.saveAdminAssignments(DEFAULT_EVENT_ID, [
+      { problemId: problem2?.id, isActive: true },
+      { problemId: problem1?.id, isActive: true }
+    ]);
+
+    const joined = await service.joinEvent(DEFAULT_EVENT_ID, "宝確認");
+    const answered = await service.answer(DEFAULT_EVENT_ID, joined.player.id, "204", "ほし");
+
+    expect(answered.result).toBe("correct");
+    expect(answered.clearedRoom?.treasureName).toBe("宝A");
   });
 
   it("keeps the reserve problem visible to admins but inactive at runtime", async () => {
@@ -120,11 +128,7 @@ describe("admin room service", () => {
     await service.saveAdminRoom(DEFAULT_EVENT_ID, {
       problemId: reserve?.id,
       roomCode: "27",
-      exploreType: "show_puzzle",
-      title: "予備",
-      puzzleText: "",
       puzzleImageUrl: "",
-      hiddenMessage: "",
       sortOrder: 27,
       isActive: true,
       answers: ["予備答え"]

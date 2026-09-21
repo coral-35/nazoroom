@@ -21,20 +21,19 @@ describe("explore service", () => {
     expect(state.explorationLogs).toHaveLength(0);
   });
 
-  it("returns hidden clue without puzzle body", async () => {
+  it("returns puzzle image for every configured room", async () => {
     const service = makeService();
     const joined = await service.joinEvent(DEFAULT_EVENT_ID, "テスト太郎");
 
     const result = await service.explore(DEFAULT_EVENT_ID, joined.player.id, "204");
 
-    expect(result.resultType).toBe("hidden_clue");
+    expect(result.resultType).toBe("show_puzzle");
     expect(result.message).toBe("部屋 204 を探索しました。");
     expect(result.room).toEqual({
       roomCode: "204",
-      title: "現地探索型の謎",
-      displayMode: "hidden"
+      puzzleImageUrl: "/puzzles/frame-02.png"
     });
-    expect(result.card?.puzzleText).toBeUndefined();
+    expect(result.card?.puzzleImageUrl).toBe("/puzzles/frame-02.png");
   });
 
   it("detects an already explored room without duplicating its log", async () => {
@@ -46,7 +45,7 @@ describe("explore service", () => {
     const state = await service.getState(DEFAULT_EVENT_ID, joined.player.id);
 
     expect(first.resultType).toBe("show_puzzle");
-    expect(first.room?.puzzleText).toBe("時計の針が示す言葉を読め。");
+    expect(first.room?.puzzleImageUrl).toBe("/puzzles/frame-01.png");
     expect(first.alreadyExplored).toBe(false);
     expect(second.alreadyExplored).toBe(true);
     expect(second.message).toContain("探索済み");
