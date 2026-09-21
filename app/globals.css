@@ -320,6 +320,12 @@ img {
   font-size: 0.92rem;
 }
 
+.button--tiny {
+  min-height: 30px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+}
+
 .button--full {
   width: 100%;
 }
@@ -375,6 +381,50 @@ img {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-top: 16px;
+}
+
+.admin-assignment-row {
+  display: grid;
+  grid-template-columns: 56px 9ch minmax(18ch, 22ch) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+}
+
+.admin-assignment-row .field {
+  gap: 2px;
+  font-size: 0.72rem;
+}
+
+.admin-assignment-row .input {
+  min-height: 30px;
+  padding: 4px 8px;
+  font-size: 0.86rem;
+}
+
+.admin-assignment-treasure {
+  min-width: 0;
+}
+
+.admin-assignment-room,
+.admin-assignment-answer {
+  min-width: 0;
+}
+
+.admin-assignment-answer .input {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-assignment-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.admin-assignment-actions .checkbox-field {
+  font-size: 0.82rem;
 }
 
 .admin-problem-preview {
@@ -678,6 +728,15 @@ img {
   .admin-room-fields,
   .dashboard-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-assignment-row {
+    grid-template-columns: 52px 8ch minmax(12ch, 1fr);
+  }
+
+  .admin-assignment-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
   }
 }
 

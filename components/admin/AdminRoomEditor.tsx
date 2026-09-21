@@ -299,12 +299,19 @@ function AssignmentForm({
   onMove: (index: number, delta: -1 | 1) => void;
 }) {
   return (
-    <div className="admin-room-card">
-      <div className="card-header">
-        <div>
-          <p className="kicker">{row.isActive ? treasureLabel(activeOrder) : "未採用"}</p>
-          <h3 className="card-title">部屋 {row.roomCode}</h3>
-        </div>
+    <div className="admin-room-card admin-assignment-row">
+      <div className="admin-assignment-treasure">
+        <span className="kicker">{row.isActive ? treasureLabel(activeOrder) : "未採用"}</span>
+      </div>
+      <label className="field admin-assignment-room">
+        部屋番号
+        <input value={row.roomCode} className="input" readOnly />
+      </label>
+      <label className="field admin-assignment-answer">
+        解答
+        <input value={row.answersText.replace(/\r?\n/g, " / ")} className="input" readOnly />
+      </label>
+      <div className="admin-assignment-actions">
         <label className="checkbox-field">
           <input
             type="checkbox"
@@ -314,28 +321,16 @@ function AssignmentForm({
           />
           採用
         </label>
-      </div>
-      <div className="admin-room-fields">
-        <label className="field">
-          部屋番号
-          <input value={row.roomCode} className="input" readOnly />
-        </label>
-        <label className="field field--full">
-          解答
-          <textarea value={row.answersText} className="input input--textarea" readOnly />
-        </label>
-      </div>
-      <div className="button-grid">
         <button
           type="button"
-          className="button button--secondary"
+          className="button button--secondary button--tiny"
           onClick={() => onMove(index, -1)}
         >
           上へ
         </button>
         <button
           type="button"
-          className="button button--secondary"
+          className="button button--secondary button--tiny"
           onClick={() => onMove(index, 1)}
         >
           下へ
