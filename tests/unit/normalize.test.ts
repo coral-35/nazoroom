@@ -12,6 +12,9 @@ describe("normalizeRoomCode", () => {
 describe("normalizeAnswer", () => {
   it("normalizes width, case, spaces, and katakana", () => {
     expect(normalizeAnswer(" ヒカリ ")).toBe("ひかり");
+    expect(normalizeAnswer("ﾋｶﾘ")).toBe("ひかり");
+    expect(normalizeAnswer("ガッコウ")).toBe("がっこう");
+    expect(normalizeAnswer("ｶﾞｯｺｳ")).toBe("がっこう");
     expect(normalizeAnswer("ひかり")).toBe("ひかり");
     expect(normalizeAnswer("HIKARI")).toBe("hikari");
     expect(normalizeAnswer("ｈｉｋａｒｉ")).toBe("hikari");

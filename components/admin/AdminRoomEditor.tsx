@@ -156,7 +156,7 @@ export function AdminRoomEditor({
         </div>
       </div>
       <p className="lead lead--small">
-        謎画像、解答、部屋番号を1組として保存します。解答は改行区切りです。
+        謎画像、解答、部屋番号を1組として保存します。画像はファイル選択で差し替えます。解答は改行区切りです。
       </p>
 
       {message ? <p className="message message--notice">{message}</p> : null}
@@ -252,15 +252,6 @@ function ProblemForm({
             onChange={(event) => onChange({ roomCode: event.target.value })}
             className="input"
             placeholder="305"
-          />
-        </label>
-        <label className="field field--full">
-          画像URL
-          <input
-            value={problem.puzzleImageUrl}
-            onChange={(event) => onChange({ puzzleImageUrl: event.target.value })}
-            className="input"
-            placeholder="/puzzles/frame-01.png"
           />
         </label>
         <label className="field field--full">
