@@ -30,10 +30,16 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
         .single();
 
       if (error) {
+        if (error.code === "42P01" || error.code === "PGRST116") {
+          return getFallbackCurrentEvent(client);
+        }
         throw error;
       }
 
       const eventRow = Array.isArray(data.events) ? data.events[0] : data.events;
+      if (!eventRow) {
+        return getFallbackCurrentEvent(client);
+      }
       return mapEvent(eventRow);
     },
 
@@ -492,6 +498,21 @@ async function updateEventRow(client: SupabaseClient, input: UpdateEventInput) {
     })
     .eq("id", input.eventId)
     .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapEvent(data);
+}
+
+async function getFallbackCurrentEvent(client: SupabaseClient) {
+  const { data, error } = await client
+    .from("events")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(1)
     .single();
 
   if (error) {
