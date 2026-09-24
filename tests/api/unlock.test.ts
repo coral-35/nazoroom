@@ -14,6 +14,7 @@ describe("answer service", () => {
     const state = await service.getState(DEFAULT_EVENT_ID, joined.player.id);
 
     expect(result.result).toBe("incorrect");
+    expect(result.message).toContain("送信した解答: やみ");
     expect(state.clearedRooms).toHaveLength(0);
   });
 

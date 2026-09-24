@@ -432,7 +432,7 @@ export function createNazoroomService(
         });
         return {
           result: "incorrect",
-          message: "不正解です。もう一度考えてみよう。"
+          message: `不正解です。送信した解答: ${inputAnswer}`
         };
       }
 
