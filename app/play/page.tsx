@@ -31,6 +31,7 @@ export default async function PlayPage({ searchParams }: PlayPageProps) {
       initialPlayerId={playerId ?? null}
       initialState={initialState}
       joinPath="/join"
+      playPath="/play"
     />
   );
 }

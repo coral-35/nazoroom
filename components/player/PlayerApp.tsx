@@ -1,12 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { CountdownTimer } from "@/components/player/CountdownTimer";
 import { ExplorePanel } from "@/components/player/ExplorePanel";
 import { PuzzleCarousel } from "@/components/player/PuzzleCarousel";
 import { RankingTable } from "@/components/player/RankingTable";
 import { ClearedRoomList } from "@/components/player/ClearedRoomList";
+import {
+  findCachedPlayer,
+  playerCacheKey,
+  playPathForCachedPlayer
+} from "@/components/player/playerCache";
 import { sortExploredRoomCards } from "@/lib/domain/explorationCards";
 import { calculateLocalDeadline, parseLocalStart } from "@/lib/domain/localTimer";
 import type {
@@ -24,6 +30,7 @@ type PlayerAppProps = {
   initialPlayerId?: string | null;
   initialState?: StateResponse | null;
   joinPath?: string;
+  playPath?: string;
 };
 
 export function PlayerApp({
@@ -31,8 +38,10 @@ export function PlayerApp({
   apiBasePath = `/api/events/${eventId}`,
   initialPlayerId = null,
   initialState = null,
-  joinPath = `/events/${eventId}/join`
+  joinPath = `/events/${eventId}/join`,
+  playPath = `/events/${eventId}/play`
 }: PlayerAppProps) {
+  const router = useRouter();
   const [playerId, setPlayerId] = useState<string | null>(initialPlayerId);
   const [state, setState] = useState<StateResponse | null>(initialState);
   const [cards, setCards] = useState<ExploredRoomCard[]>(
@@ -78,6 +87,17 @@ export function PlayerApp({
           setTimeUp(true);
         }
       } catch (caught) {
+        if (
+          caught instanceof Error &&
+          caught.message === "参加情報が確認できません。再参加してください。"
+        ) {
+          const cachedPlayer = findCachedPlayer(eventId);
+          if (cachedPlayer && cachedPlayer.playerId !== id) {
+            router.replace(playPathForCachedPlayer(cachedPlayer, eventId, playPath));
+            return;
+          }
+        }
+
         setFeedback(
           caught instanceof Error
             ? caught.message
@@ -89,16 +109,22 @@ export function PlayerApp({
         }
       }
     },
-    [apiBasePath]
+    [apiBasePath, eventId, playPath, router]
   );
 
   useEffect(() => {
     const fromUrl =
       initialPlayerId ?? new URLSearchParams(window.location.search).get("playerId");
-    const stored = localStorage.getItem(`nazoroom.player.${eventId}`);
+    const stored = localStorage.getItem(playerCacheKey(eventId));
     const id = fromUrl ?? stored;
 
     if (!id) {
+      const cachedPlayer = findCachedPlayer(eventId);
+      if (cachedPlayer) {
+        router.replace(playPathForCachedPlayer(cachedPlayer, eventId, playPath));
+        return;
+      }
+
       setLoading(false);
       return;
     }
@@ -110,7 +136,7 @@ export function PlayerApp({
     }
 
     void loadState(id);
-  }, [eventId, initialPlayerId, initialState, loadState]);
+  }, [eventId, initialPlayerId, initialState, loadState, playPath, router]);
 
   useEffect(() => {
     if (!playerId || !state) {

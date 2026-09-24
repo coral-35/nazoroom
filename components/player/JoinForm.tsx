@@ -2,6 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
+import {
+  cachePlayer,
+  findCachedPlayer,
+  playPathForCachedPlayer
+} from "@/components/player/playerCache";
 import type { JoinResponse } from "@/lib/types/app";
 
 type JoinFormProps = {
@@ -22,9 +27,9 @@ export function JoinForm({
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const cachedPlayerId = localStorage.getItem(`nazoroom.player.${eventId}`);
-    if (cachedPlayerId) {
-      router.replace(`${playPath}?playerId=${cachedPlayerId}`);
+    const cachedPlayer = findCachedPlayer(eventId);
+    if (cachedPlayer) {
+      router.replace(playPathForCachedPlayer(cachedPlayer, eventId, playPath));
       return;
     }
 
@@ -56,7 +61,7 @@ export function JoinForm({
       }
 
       const joined = data as JoinResponse;
-      localStorage.setItem(`nazoroom.player.${eventId}`, joined.player.id);
+      cachePlayer(eventId, joined.player.id);
       router.push(`${playPath}?playerId=${joined.player.id}`);
     } catch (caught) {
       setError(
