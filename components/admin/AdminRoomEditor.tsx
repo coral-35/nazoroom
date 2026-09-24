@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type {
   AdminRoomsResponse,
   AdminRoomRecord,
@@ -76,8 +76,7 @@ export function AdminRoomEditor({
     }
   }
 
-  async function saveAssignments(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function saveAssignments() {
     setBusyKey("assignments");
     setError(null);
     setMessage(null);
@@ -172,16 +171,17 @@ export function AdminRoomEditor({
         ))}
       </div>
 
-      <form className="panel section-gap" onSubmit={saveAssignments}>
+      <div className="panel section-gap">
         <div className="panel-header">
           <div>
             <p className="kicker">採用設定</p>
             <h2 className="card-title">表示順と宝の割当</h2>
           </div>
           <button
-            type="submit"
+            type="button"
             className="button button--primary button--compact"
             disabled={busyKey === "assignments"}
+            onClick={saveAssignments}
           >
             {busyKey === "assignments" ? "保存中..." : "一括確定"}
           </button>
@@ -209,7 +209,7 @@ export function AdminRoomEditor({
             );
           })}
         </div>
-      </form>
+      </div>
     </section>
   );
 }

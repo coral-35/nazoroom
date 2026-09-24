@@ -119,6 +119,27 @@ describe("admin room service", () => {
     expect(answered.clearedRoom?.treasureName).toBe("宝A");
   });
 
+  it("accepts bulk assignment payloads from the admin editor", async () => {
+    const service = makeService();
+    const initial = await service.listAdminRooms(DEFAULT_EVENT_ID);
+    const problem1 = initial.problems.find((item) => item.problemNumber === 1);
+    const problem2 = initial.problems.find((item) => item.problemNumber === 2);
+
+    await service.saveAdminAssignments(DEFAULT_EVENT_ID, {
+      assignments: [
+        { problemId: problem2?.id, isActive: true },
+        { problemId: problem1?.id, isActive: true }
+      ]
+    });
+
+    const afterSave = await service.listAdminRooms(DEFAULT_EVENT_ID);
+    const room2 = afterSave.rooms.find((item) => item.problemId === problem2?.id);
+    const room1 = afterSave.rooms.find((item) => item.problemId === problem1?.id);
+
+    expect(room2?.sortOrder).toBe(1);
+    expect(room1?.sortOrder).toBe(2);
+  });
+
   it("allows problem 27 to be adopted like any other problem", async () => {
     const service = makeService();
     const initial = await service.listAdminRooms(DEFAULT_EVENT_ID);
