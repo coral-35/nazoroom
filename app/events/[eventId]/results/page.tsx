@@ -18,10 +18,10 @@ export default async function ResultsPage({ params }: ResultsPageProps) {
           <h1 className="section-title">ランキング</h1>
         </div>
         <Link
-          href={`/events/${eventId}/join`}
+          href={`/admin/events/${eventId}`}
           className="button button--secondary button--compact"
         >
-          参加へ
+          管理画面へ
         </Link>
       </div>
       <ResultsPanel eventId={eventId} />

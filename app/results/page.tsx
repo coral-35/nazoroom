@@ -14,8 +14,8 @@ export default async function ResultsPage() {
           <p className="kicker">結果</p>
           <h1 className="section-title">ランキング</h1>
         </div>
-        <Link href="/join" className="button button--secondary button--compact">
-          参加へ
+        <Link href="/admin" className="button button--secondary button--compact">
+          管理画面へ
         </Link>
       </div>
       <ResultsPanel eventId={event.id} apiBasePath="/api/event" />
