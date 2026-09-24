@@ -3,14 +3,13 @@ import { getNazoroomService } from "@/lib/server/service";
 import {
   getEventId,
   jsonError,
-  readJsonObject,
   type EventRouteContext
 } from "@/lib/server/route";
 
 export async function POST(request: Request, context: EventRouteContext) {
   try {
     const eventId = await getEventId(context);
-    const body = await readJsonObject(request);
+    const body = await request.json();
     const response = await getNazoroomService().saveAdminAssignments(eventId, body);
 
     return NextResponse.json(response);
