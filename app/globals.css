@@ -750,6 +750,11 @@ img {
   padding: 10px 12px;
 }
 
+.play-shell .result-ranking,
+.play-shell .result-waiting {
+  margin-top: 0;
+}
+
 .player-header .muted {
   margin: 4px 0 0;
   overflow-wrap: anywhere;
