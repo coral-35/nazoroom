@@ -101,7 +101,7 @@ test("closed exploration shows waiting notice above disabled controls", async ({
 
   await page.goto("/events/closed/play?playerId=closed-player");
   await expect(page.getByRole("heading", { name: "結果発表待ち" })).toBeVisible();
-  await expect(page.getByText("探索時間は終了しました。")).toBeVisible();
+  await expect(page.getByText("探索時間が終了しました")).toBeVisible();
   await page.getByPlaceholder("部屋番号を入力").fill("305");
   await expect(page.getByRole("button", { name: "探索", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "解答", exact: true })).toBeDisabled();

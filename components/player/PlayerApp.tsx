@@ -375,7 +375,7 @@ export function PlayerApp({
           <div className="panel panel--tight">
             <h2 className="card-title">結果発表待ち</h2>
             <p className="lead lead--small">
-              探索時間は終了しました。結果発表まで部屋の探索と解答はできません。
+              探索時間が終了しました
             </p>
           </div>
         </section>
