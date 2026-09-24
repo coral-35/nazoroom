@@ -22,8 +22,14 @@ export function JoinForm({
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    const cachedPlayerId = localStorage.getItem(`nazoroom.player.${eventId}`);
+    if (cachedPlayerId) {
+      router.replace(`${playPath}?playerId=${cachedPlayerId}`);
+      return;
+    }
+
     setMounted(true);
-  }, []);
+  }, [eventId, playPath, router]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
