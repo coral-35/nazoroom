@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { getEventAvailability, isEventActive, isEventExpired } from "@/lib/domain/eventStatus";
+import {
+  canExploreRooms,
+  getEventAvailability,
+  isEventActive,
+  isEventExpired
+} from "@/lib/domain/eventStatus";
 import type { EventRecord } from "@/lib/types/app";
 
 const now = new Date("2026-07-09T10:00:00.000Z");
@@ -34,6 +39,18 @@ describe("event status helpers", () => {
       )
     ).toBe(true);
     expect(isEventExpired(makeEvent({ status: "ended" }), now)).toBe(true);
+  });
+
+  it("allows reflection exploration only while active or after results are published", () => {
+    expect(canExploreRooms(makeEvent({ status: "draft" }), now)).toBe(false);
+    expect(canExploreRooms(makeEvent({ status: "active" }), now)).toBe(true);
+    expect(
+      canExploreRooms(
+        makeEvent({ status: "active", endsAt: "2026-07-09T09:59:00.000Z" }),
+        now
+      )
+    ).toBe(false);
+    expect(canExploreRooms(makeEvent({ status: "ended" }), now)).toBe(true);
   });
 });
 

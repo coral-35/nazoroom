@@ -66,6 +66,21 @@ describe("explore service", () => {
     expect(result.resultType).toBe("show_puzzle");
     expect(result.room?.roomCode).toBe("305");
   });
+
+  it("blocks room exploration after closing and before publishing results", async () => {
+    const service = makeService();
+    const joined = await service.joinEvent(DEFAULT_EVENT_ID, "終了後確認");
+    await service.controlEvent(DEFAULT_EVENT_ID, "close_exploration");
+
+    await expect(
+      service.explore(DEFAULT_EVENT_ID, joined.player.id, "305")
+    ).rejects.toThrow("探索は終了しています。結果発表までお待ちください。");
+
+    await service.controlEvent(DEFAULT_EVENT_ID, "publish_results");
+    const result = await service.explore(DEFAULT_EVENT_ID, joined.player.id, "305");
+
+    expect(result.resultType).toBe("show_puzzle");
+  });
 });
 
 function makeService() {

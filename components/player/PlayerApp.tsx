@@ -155,7 +155,8 @@ export function PlayerApp({
   }, [loadState, playerId, state?.event.status]);
 
   const waiting = state?.event.status === "draft";
-  const exploreDisabled = loading || !state || waiting;
+  const exploreDisabled =
+    loading || !state || waiting || (timeUp && state.event.status !== "ended");
   const answerDisabled = exploreDisabled || timeUp || !localStartAt;
   const eventTitle = state?.event.title ?? "謎解きダンジョン";
   const deadlineAt =

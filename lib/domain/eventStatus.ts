@@ -38,3 +38,14 @@ export function isEventExpired(
 ): boolean {
   return getEventAvailability(event, now) === "ended";
 }
+
+export function canExploreRooms(
+  event: Pick<EventRecord, "status" | "startsAt" | "endsAt">,
+  now: Date = new Date()
+): boolean {
+  if (event.status === "ended") {
+    return true;
+  }
+
+  return getEventAvailability(event, now) === "active";
+}

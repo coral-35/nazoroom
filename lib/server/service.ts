@@ -1,5 +1,5 @@
 import { treasureNameForOrder } from "@/lib/domain/treasures";
-import { isEventActive, isEventExpired } from "@/lib/domain/eventStatus";
+import { canExploreRooms, isEventActive, isEventExpired } from "@/lib/domain/eventStatus";
 import { normalizeAnswer, normalizeRoomCode } from "@/lib/domain/normalize";
 import { calculateRanking } from "@/lib/domain/scoring";
 import { AppError } from "@/lib/server/errors";
@@ -294,8 +294,8 @@ export function createNazoroomService(
       if (!player) {
         throw new AppError("参加情報が確認できません。再参加してください。", 404);
       }
-      if (event.status === "draft") {
-        throw new AppError(eventNotActiveMessage(event, now()), 409);
+      if (!canExploreRooms(event, now())) {
+        throw new AppError(exploreNotAvailableMessage(event, now()), 409);
       }
 
       const room = await repository.getRoomByNormalizedCode(eventId, normalizedRoomCode);
@@ -524,6 +524,14 @@ function buildExploreMessage(inputRoomCode: string, room: RoomRecord | null) {
 function eventNotActiveMessage(event: EventRecord, at: Date) {
   if (isEventExpired(event, at)) {
     return "制限時間が終了したため、解答できません。";
+  }
+
+  return "イベントはまだ開始されていません。";
+}
+
+function exploreNotAvailableMessage(event: EventRecord, at: Date) {
+  if (isEventExpired(event, at)) {
+    return "探索は終了しています。結果発表までお待ちください。";
   }
 
   return "イベントはまだ開始されていません。";
