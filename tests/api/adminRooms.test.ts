@@ -119,28 +119,22 @@ describe("admin room service", () => {
     expect(answered.clearedRoom?.treasureName).toBe("宝A");
   });
 
-  it("keeps the reserve problem visible to admins but inactive at runtime", async () => {
+  it("allows problem 27 to be adopted like any other problem", async () => {
     const service = makeService();
     const initial = await service.listAdminRooms(DEFAULT_EVENT_ID);
-    const reserve = initial.problems.find((item) => item.problemNumber === 27);
-    expect(reserve?.isReserve).toBe(true);
+    const problem = initial.problems.find((item) => item.problemNumber === 27);
 
-    await service.saveAdminRoom(DEFAULT_EVENT_ID, {
-      problemId: reserve?.id,
-      roomCode: "27",
-      puzzleImageUrl: "",
-      sortOrder: 27,
-      isActive: true,
-      answers: ["予備答え"]
-    });
+    await service.saveAdminAssignments(DEFAULT_EVENT_ID, [
+      { problemId: problem?.id, isActive: true }
+    ]);
 
     const afterSave = await service.listAdminRooms(DEFAULT_EVENT_ID);
-    const reserveRoom = afterSave.rooms.find((item) => item.problemId === reserve?.id);
-    const joined = await service.joinEvent(DEFAULT_EVENT_ID, "予備確認");
+    const room = afterSave.rooms.find((item) => item.problemId === problem?.id);
+    const joined = await service.joinEvent(DEFAULT_EVENT_ID, "採用確認");
     const explored = await service.explore(DEFAULT_EVENT_ID, joined.player.id, "27");
 
-    expect(reserveRoom?.isActive).toBe(false);
-    expect(explored.resultType).toBe("not_found");
+    expect(room?.isActive).toBe(true);
+    expect(explored.resultType).toBe("show_puzzle");
   });
 });
 

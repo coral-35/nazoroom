@@ -52,7 +52,6 @@ export type ProblemBankRecord = {
   normalizedRoomCode: string;
   puzzleImageUrl: string;
   defaultAnswers: string[];
-  isReserve: boolean;
   createdAt?: string;
   updatedAt?: string;
 };

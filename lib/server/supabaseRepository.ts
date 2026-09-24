@@ -425,7 +425,7 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
         const currentRoom =
           currentRooms.find((room) => room.problemId === problem.id) ??
           currentRooms.find((room) => room.id === assignment.roomId);
-        const isActive = assignment.isActive && !problem.isReserve;
+        const isActive = assignment.isActive;
 
         await upsertRoomRow(client, {
           eventId,
@@ -699,7 +699,6 @@ function mapProblemBank(row: any): ProblemBankRecord {
     normalizedRoomCode: row.normalized_room_code,
     puzzleImageUrl: row.puzzle_image_url,
     defaultAnswers: Array.isArray(row.default_answers) ? row.default_answers : [],
-    isReserve: row.is_reserve === true,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };

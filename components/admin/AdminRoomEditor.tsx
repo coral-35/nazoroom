@@ -20,7 +20,6 @@ type EditableProblem = {
   roomCode: string;
   puzzleImageUrl: string;
   answersText: string;
-  isReserve: boolean;
   imageFile: File | null;
 };
 
@@ -30,7 +29,6 @@ type AssignmentRow = {
   roomCode: string;
   answersText: string;
   isActive: boolean;
-  isReserve: boolean;
 };
 
 export function AdminRoomEditor({
@@ -237,7 +235,7 @@ function ProblemForm({
     >
       <div className="card-header">
         <div>
-          <p className="kicker">{problem.isReserve ? "予備" : `問題 ${problem.problemNumber}`}</p>
+          <p className="kicker">問題 {problem.problemNumber}</p>
           <h3 className="card-title">部屋 {problem.roomCode || "未設定"}</h3>
         </div>
         <button type="submit" className="button button--primary button--compact" disabled={busy}>
@@ -313,7 +311,6 @@ function AssignmentForm({
           <input
             type="checkbox"
             checked={row.isActive}
-            disabled={row.isReserve}
             onChange={(event) => onChange({ isActive: event.target.checked })}
           />
           採用
@@ -344,7 +341,6 @@ function toEditableProblem(problem: ProblemBankRecord): EditableProblem {
     roomCode: problem.roomCode,
     puzzleImageUrl: problem.puzzleImageUrl,
     answersText: problem.defaultAnswers.join("\n"),
-    isReserve: problem.isReserve,
     imageFile: null
   };
 }
@@ -396,8 +392,7 @@ function buildAssignments(
         roomId: room?.id,
         roomCode: problem.roomCode,
         answersText: problem.defaultAnswers.join("\n"),
-        isActive: room?.isActive ?? !problem.isReserve,
-        isReserve: problem.isReserve
+        isActive: room?.isActive ?? false
       };
     });
 }

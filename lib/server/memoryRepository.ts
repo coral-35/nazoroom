@@ -398,7 +398,7 @@ export function createMemoryRepository(
           state.rooms.find(
             (room) => room.eventId === eventId && room.id === assignment.roomId
           );
-        const isActive = assignment.isActive && !problem.isReserve;
+        const isActive = assignment.isActive;
         const room = upsertMemoryRoom({
           eventId,
           roomId: currentRoom?.id,
@@ -605,7 +605,6 @@ function createProblem(
     normalizedRoomCode: roomCode,
     puzzleImageUrl,
     defaultAnswers,
-    isReserve: problemNumber === 27,
     createdAt,
     updatedAt: createdAt
   };
