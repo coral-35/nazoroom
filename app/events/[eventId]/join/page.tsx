@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { JoinForm } from "@/components/player/JoinForm";
 
 type JoinPageProps = {
@@ -13,9 +12,6 @@ export default async function JoinPage({ params }: JoinPageProps) {
   return (
     <main className="page-shell page-shell--center">
       <div>
-        <Link href="/" className="text-link">
-          トップへ
-        </Link>
         <h1 className="page-title">参加する</h1>
         <p className="lead">
           ニックネームを登録すると、探索画面に進みます。
