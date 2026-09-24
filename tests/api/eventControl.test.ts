@@ -59,17 +59,25 @@ describe("event control service", () => {
     expect(stateAfterPublish.ranking).not.toBeNull();
   });
 
-  it("resets players and returns the event to draft", async () => {
+  it("creates a new current event on reset without deleting previous progress", async () => {
     const service = makeService();
+    await service.controlEvent(DEFAULT_EVENT_ID, "start_exploration", 60);
     const joined = await service.joinEvent(DEFAULT_EVENT_ID, "A");
 
     await service.answer(DEFAULT_EVENT_ID, joined.player.id, "305", "ひかり");
     const reset = await service.controlEvent(DEFAULT_EVENT_ID, "reset");
+    const current = await service.getCurrentEvent();
+    const oldState = await service.getState(DEFAULT_EVENT_ID, joined.player.id);
+    const newJoin = await service.joinEvent(current.id, "A");
 
     expect(reset.event.status).toBe("draft");
+    expect(reset.event.id).not.toBe(DEFAULT_EVENT_ID);
+    expect(current.id).toBe(reset.event.id);
     expect(reset.event.startsAt).toBeNull();
     expect(reset.event.endsAt).toBeNull();
-    await expect(service.getState(DEFAULT_EVENT_ID, joined.player.id)).rejects.toThrow(
+    expect(oldState.clearedRooms).toHaveLength(1);
+    expect(newJoin.player.id).not.toBe(joined.player.id);
+    await expect(service.getState(current.id, joined.player.id)).rejects.toThrow(
       "参加情報が確認できません。再参加してください。"
     );
   });

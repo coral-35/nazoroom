@@ -1,6 +1,8 @@
 import { PlayerApp } from "@/components/player/PlayerApp";
 import { getNazoroomService } from "@/lib/server/service";
-import { DEFAULT_EVENT_ID, type StateResponse } from "@/lib/types/app";
+import type { StateResponse } from "@/lib/types/app";
+
+export const dynamic = "force-dynamic";
 
 type PlayPageProps = {
   searchParams: Promise<{
@@ -10,11 +12,13 @@ type PlayPageProps = {
 
 export default async function PlayPage({ searchParams }: PlayPageProps) {
   const { playerId } = await searchParams;
+  const service = getNazoroomService();
+  const event = await service.getCurrentEvent();
   let initialState: StateResponse | null = null;
 
   if (playerId) {
     try {
-      initialState = await getNazoroomService().getState(DEFAULT_EVENT_ID, playerId);
+      initialState = await service.getState(event.id, playerId);
     } catch {
       initialState = null;
     }
@@ -22,7 +26,7 @@ export default async function PlayPage({ searchParams }: PlayPageProps) {
 
   return (
     <PlayerApp
-      eventId={DEFAULT_EVENT_ID}
+      eventId={event.id}
       apiBasePath="/api/event"
       initialPlayerId={playerId ?? null}
       initialState={initialState}

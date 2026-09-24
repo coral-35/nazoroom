@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { AdminRoomEditor } from "@/components/admin/AdminRoomEditor";
 import { getNazoroomService } from "@/lib/server/service";
-import { DEFAULT_EVENT_ID } from "@/lib/types/app";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminProblemsPage() {
-  const rooms = await getNazoroomService().listAdminRooms(DEFAULT_EVENT_ID);
+  const service = getNazoroomService();
+  const event = await service.getCurrentEvent();
+  const rooms = await service.listAdminRooms(event.id);
 
   return (
     <main className="page-shell page-shell--wide">
@@ -20,7 +21,7 @@ export default async function AdminProblemsPage() {
         </Link>
       </div>
       <AdminRoomEditor
-        eventId={DEFAULT_EVENT_ID}
+        eventId={event.id}
         apiBasePath="/api/admin/event"
         initialRooms={rooms.rooms}
         initialProblems={rooms.problems}

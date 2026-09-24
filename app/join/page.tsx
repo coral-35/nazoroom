@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { JoinForm } from "@/components/player/JoinForm";
-import { DEFAULT_EVENT_ID } from "@/lib/types/app";
+import { getNazoroomService } from "@/lib/server/service";
 
-export default function JoinPage() {
+export const dynamic = "force-dynamic";
+
+export default async function JoinPage() {
+  const event = await getNazoroomService().getCurrentEvent();
+
   return (
     <main className="page-shell page-shell--center">
       <div>
@@ -15,7 +19,7 @@ export default function JoinPage() {
         </p>
       </div>
       <JoinForm
-        eventId={DEFAULT_EVENT_ID}
+        eventId={event.id}
         apiBasePath="/api/event"
         playPath="/play"
       />

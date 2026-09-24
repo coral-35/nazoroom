@@ -2,15 +2,15 @@ import Link from "next/link";
 import { AdminEventControl } from "@/components/admin/AdminEventControl";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { getNazoroomService } from "@/lib/server/service";
-import { DEFAULT_EVENT_ID } from "@/lib/types/app";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const service = getNazoroomService();
+  const currentEvent = await service.getCurrentEvent();
   const [adminState, dashboard] = await Promise.all([
-    service.getAdminEvent(DEFAULT_EVENT_ID),
-    service.getAdminDashboard(DEFAULT_EVENT_ID)
+    service.getAdminEvent(currentEvent.id),
+    service.getAdminDashboard(currentEvent.id)
   ]);
 
   return (
@@ -42,7 +42,7 @@ export default async function AdminPage() {
       </section>
       <section className="section-gap">
         <AdminEventControl
-          eventId={DEFAULT_EVENT_ID}
+          eventId={currentEvent.id}
           apiBasePath="/api/admin/event"
           initialEvent={adminState.event}
           initialMessage={adminState.message}

@@ -44,6 +44,10 @@ export function createNazoroomService(
   const now = options.now ?? (() => new Date());
 
   return {
+    async getCurrentEvent(): Promise<EventRecord> {
+      return repository.getCurrentEvent();
+    },
+
     async getAdminEvent(eventId: string): Promise<AdminEventControlResponse> {
       const event = await getExistingEvent(repository, eventId);
       return {
@@ -114,14 +118,12 @@ export function createNazoroomService(
           message = "結果を発表しました。ランキングを閲覧できます。";
           break;
         case "reset":
-          nextEvent = await repository.resetEventProgress({
-            eventId,
-            status: "draft",
-            startsAt: null,
-            endsAt: null,
+          nextEvent = await repository.createNextEvent({
+            sourceEventId: eventId,
+            title: event.title,
             durationMinutes: event.durationMinutes
           });
-          message = "進行状況をリセットしました。参加者と探索履歴は消去されました。";
+          message = "前回の参加者と探索履歴を残したまま、新しいイベントを作成しました。";
           break;
         default:
           throw new AppError("管理操作を選択してください。", 400);

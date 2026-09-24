@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getNazoroomService } from "@/lib/server/service";
 import { jsonError, readJsonObject } from "@/lib/server/route";
-import { DEFAULT_EVENT_ID, type EventControlAction } from "@/lib/types/app";
+import type { EventControlAction } from "@/lib/types/app";
 
 const actions = new Set<EventControlAction>([
   "start_exploration",
@@ -22,8 +22,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const response = await getNazoroomService().controlEvent(
-      DEFAULT_EVENT_ID,
+    const service = getNazoroomService();
+    const event = await service.getCurrentEvent();
+    const response = await service.controlEvent(
+      event.id,
       action as EventControlAction,
       body.durationMinutes
     );

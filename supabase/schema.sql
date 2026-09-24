@@ -21,6 +21,12 @@ create table if not exists public.events (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.app_settings (
+  id text primary key,
+  current_event_id uuid not null references public.events(id) on delete restrict,
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.players (
   id uuid primary key default gen_random_uuid(),
   event_id uuid not null references public.events(id) on delete cascade,
@@ -117,6 +123,11 @@ create trigger set_events_updated_at
 before update on public.events
 for each row execute function public.set_updated_at();
 
+drop trigger if exists set_app_settings_updated_at on public.app_settings;
+create trigger set_app_settings_updated_at
+before update on public.app_settings
+for each row execute function public.set_updated_at();
+
 drop trigger if exists set_rooms_updated_at on public.rooms;
 create trigger set_rooms_updated_at
 before update on public.rooms
@@ -142,6 +153,7 @@ create index if not exists answer_attempts_player_idx
   on public.answer_attempts(event_id, player_id, created_at);
 
 alter table public.events enable row level security;
+alter table public.app_settings enable row level security;
 alter table public.players enable row level security;
 alter table public.problem_bank enable row level security;
 alter table public.rooms enable row level security;

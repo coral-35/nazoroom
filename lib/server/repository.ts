@@ -47,6 +47,12 @@ export type UpdateEventInput = {
   durationMinutes: number;
 };
 
+export type CreateNextEventInput = {
+  sourceEventId: string;
+  title: string;
+  durationMinutes: number;
+};
+
 export type UpsertRoomInput = {
   eventId: string;
   roomId?: string;
@@ -63,9 +69,11 @@ export type UpsertRoomInput = {
 };
 
 export type NazoroomRepository = {
+  getCurrentEvent(): Promise<EventRecord>;
   getEvent(eventId: string): Promise<EventRecord | null>;
   updateEvent(input: UpdateEventInput): Promise<EventRecord>;
   resetEventProgress(input: UpdateEventInput): Promise<EventRecord>;
+  createNextEvent(input: CreateNextEventInput): Promise<EventRecord>;
   upsertPlayer(eventId: string, nickname: string): Promise<PlayerRecord>;
   getPlayer(eventId: string, playerId: string): Promise<PlayerRecord | null>;
   getRoomByNormalizedCode(

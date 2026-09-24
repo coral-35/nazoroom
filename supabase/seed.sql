@@ -15,6 +15,11 @@ set
   ends_at = excluded.ends_at,
   duration_minutes = excluded.duration_minutes;
 
+insert into public.app_settings (id, current_event_id)
+values ('current', '00000000-0000-0000-0000-000000000001')
+on conflict (id) do update
+set current_event_id = excluded.current_event_id;
+
 insert into public.problem_bank (
   id,
   problem_number,

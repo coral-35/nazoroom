@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { ResultsPanel } from "@/components/player/ResultsPanel";
-import { DEFAULT_EVENT_ID } from "@/lib/types/app";
+import { getNazoroomService } from "@/lib/server/service";
 
-export default function ResultsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function ResultsPage() {
+  const event = await getNazoroomService().getCurrentEvent();
+
   return (
     <main className="page-shell page-shell--wide">
       <div className="page-header">
@@ -14,7 +18,7 @@ export default function ResultsPage() {
           参加へ
         </Link>
       </div>
-      <ResultsPanel eventId={DEFAULT_EVENT_ID} apiBasePath="/api/event" />
+      <ResultsPanel eventId={event.id} apiBasePath="/api/event" />
     </main>
   );
 }

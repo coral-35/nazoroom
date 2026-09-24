@@ -16,12 +16,14 @@ import type {
 import {
   buildExploredRoomCard,
   type CreateClearInput,
+  type CreateNextEventInput,
   type NazoroomRepository,
   type UpdateEventInput,
   type UpsertRoomInput
 } from "@/lib/server/repository";
 
 export type MemoryState = {
+  currentEventId: string;
   events: EventRecord[];
   players: PlayerRecord[];
   problemBank: ProblemBankRecord[];
@@ -48,6 +50,7 @@ export function createSeedMemoryState(now: Date = new Date()): MemoryState {
   const createdAt = now.toISOString();
 
   return {
+    currentEventId: DEFAULT_EVENT_ID,
     events: [
       {
         id: DEFAULT_EVENT_ID,
@@ -118,6 +121,15 @@ export function createMemoryRepository(
   let state = loadState(options.persistPath) ?? initialState;
 
   return {
+    async getCurrentEvent() {
+      readLatest();
+      return (
+        state.events.find((event) => event.id === currentEventId()) ??
+        state.events.find((event) => event.id === DEFAULT_EVENT_ID) ??
+        state.events[0]
+      );
+    },
+
     async getEvent(eventId) {
       readLatest();
       return state.events.find((event) => event.id === eventId) ?? null;
@@ -126,6 +138,13 @@ export function createMemoryRepository(
     async updateEvent(input) {
       readLatest();
       const event = updateMemoryEvent(input);
+      persist();
+      return event;
+    },
+
+    async createNextEvent(input) {
+      readLatest();
+      const event = createNextMemoryEvent(input);
       persist();
       return event;
     },
@@ -448,6 +467,50 @@ export function createMemoryRepository(
     };
     state.events[index] = next;
     return next;
+  }
+
+  function createNextMemoryEvent(input: CreateNextEventInput) {
+    const now = new Date().toISOString();
+    const nextEvent: EventRecord = {
+      id: crypto.randomUUID(),
+      title: input.title,
+      status: "draft",
+      startsAt: null,
+      endsAt: null,
+      durationMinutes: input.durationMinutes,
+      createdAt: now,
+      updatedAt: now
+    };
+    state.events.push(nextEvent);
+
+    const sourceRooms = buildAdminRooms(input.sourceEventId);
+    for (const sourceRoom of sourceRooms) {
+      const room = upsertMemoryRoom({
+        eventId: nextEvent.id,
+        problemId: sourceRoom.problemId,
+        roomCode: sourceRoom.roomCode,
+        normalizedRoomCode: sourceRoom.normalizedRoomCode,
+        puzzleImageUrl: sourceRoom.puzzleImageUrl,
+        sortOrder: sourceRoom.sortOrder,
+        isActive: sourceRoom.isActive,
+        answers: sourceRoom.answers.map((answer) => ({
+          answerText: answer.answerText,
+          normalizedAnswer: answer.normalizedAnswer
+        }))
+      });
+      state.roomAnswers.push(
+        ...sourceRoom.answers.map((answer) =>
+          createAnswer(room.id, answer.answerText, answer.normalizedAnswer, now)
+        )
+      );
+    }
+
+    state.currentEventId = nextEvent.id;
+    return nextEvent;
+  }
+
+  function currentEventId() {
+    return state.currentEventId ?? DEFAULT_EVENT_ID;
   }
 
   function upsertMemoryRoom(input: UpsertRoomInput) {

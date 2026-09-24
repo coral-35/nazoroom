@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { getNazoroomService } from "@/lib/server/service";
 import { jsonError, readJsonObject } from "@/lib/server/route";
-import { DEFAULT_EVENT_ID } from "@/lib/types/app";
 
 export async function POST(request: Request) {
   try {
     const body = await readJsonObject(request);
-    const response = await getNazoroomService().saveAdminAssignments(DEFAULT_EVENT_ID, body);
+    const service = getNazoroomService();
+    const event = await service.getCurrentEvent();
+    const response = await service.saveAdminAssignments(event.id, body);
 
     return NextResponse.json(response);
   } catch (error) {

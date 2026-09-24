@@ -14,6 +14,7 @@ import type {
 import {
   buildExploredRoomCard,
   type CreateClearInput,
+  type CreateNextEventInput,
   type NazoroomRepository,
   type UpdateEventInput,
   type UpsertRoomInput
@@ -21,6 +22,21 @@ import {
 
 export function createSupabaseRepository(client: SupabaseClient): NazoroomRepository {
   return {
+    async getCurrentEvent() {
+      const { data, error } = await client
+        .from("app_settings")
+        .select("current_event_id, events(*)")
+        .eq("id", "current")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      const eventRow = Array.isArray(data.events) ? data.events[0] : data.events;
+      return mapEvent(eventRow);
+    },
+
     async getEvent(eventId) {
       const { data, error } = await client
         .from("events")
@@ -37,6 +53,10 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
 
     async updateEvent(input) {
       return updateEventRow(client, input);
+    },
+
+    async createNextEvent(input) {
+      return createNextEventRow(client, input);
     },
 
     async resetEventProgress(input) {
@@ -479,6 +499,68 @@ async function updateEventRow(client: SupabaseClient, input: UpdateEventInput) {
   }
 
   return mapEvent(data);
+}
+
+async function createNextEventRow(client: SupabaseClient, input: CreateNextEventInput) {
+  const { data: eventData, error: eventError } = await client
+    .from("events")
+    .insert({
+      title: input.title,
+      status: "draft",
+      starts_at: null,
+      ends_at: null,
+      duration_minutes: input.durationMinutes
+    })
+    .select("*")
+    .single();
+
+  if (eventError) {
+    throw eventError;
+  }
+
+  const nextEvent = mapEvent(eventData);
+  const sourceRooms = await listAdminRoomRows(client, input.sourceEventId);
+
+  for (const sourceRoom of sourceRooms) {
+    await upsertRoomRow(client, {
+      eventId: nextEvent.id,
+      problemId: sourceRoom.problemId,
+      roomCode: sourceRoom.roomCode,
+      normalizedRoomCode: sourceRoom.normalizedRoomCode,
+      puzzleImageUrl: sourceRoom.puzzleImageUrl,
+      sortOrder: sourceRoom.sortOrder,
+      isActive: sourceRoom.isActive,
+      answers: sourceRoom.answers.map((answer) => ({
+        answerText: answer.answerText,
+        normalizedAnswer: answer.normalizedAnswer
+      }))
+    });
+  }
+
+  const { error: settingError } = await client
+    .from("app_settings")
+    .upsert({ id: "current", current_event_id: nextEvent.id }, { onConflict: "id" });
+
+  if (settingError) {
+    throw settingError;
+  }
+
+  return nextEvent;
+}
+
+async function listAdminRoomRows(client: SupabaseClient, eventId: string) {
+  const { data, error } = await client
+    .from("rooms")
+    .select("*, room_answers(*)")
+    .eq("event_id", eventId)
+    .order("sort_order", { ascending: true })
+    .order("room_code", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map(mapAdminRoom);
 }
 
 async function upsertRoomRow(client: SupabaseClient, input: UpsertRoomInput) {
