@@ -44,6 +44,8 @@ export function AdminRoomEditor({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [organizing, setOrganizing] = useState(false);
+  const [assignmentDraft, setAssignmentDraft] = useState<AssignmentRow[]>([]);
 
   const problemById = useMemo(
     () => new Map(problems.map((problem) => [problem.id, problem])),
@@ -76,7 +78,7 @@ export function AdminRoomEditor({
     }
   }
 
-  async function saveAssignments() {
+  async function saveAssignments(rows: AssignmentRow[]) {
     setBusyKey("assignments");
     setError(null);
     setMessage(null);
@@ -86,7 +88,7 @@ export function AdminRoomEditor({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          assignments: assignments.map((assignment) => ({
+          assignments: rows.map((assignment) => ({
             problemId: assignment.problemId,
             roomId: assignment.roomId,
             isActive: assignment.isActive
@@ -100,6 +102,8 @@ export function AdminRoomEditor({
       }
 
       applyResponse(data as AdminRoomsResponse);
+      setOrganizing(false);
+      setAssignmentDraft([]);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "通信に失敗しました。");
     } finally {
@@ -114,6 +118,18 @@ export function AdminRoomEditor({
     setMessage(response.message ?? "保存しました。");
   }
 
+  function openOrganizer() {
+    setAssignmentDraft(assignments.map((assignment) => ({ ...assignment })));
+    setOrganizing(true);
+    setError(null);
+    setMessage(null);
+  }
+
+  function closeOrganizer() {
+    setAssignmentDraft([]);
+    setOrganizing(false);
+  }
+
   function patchProblem(index: number, patch: Partial<EditableProblem>) {
     setProblems((current) =>
       current.map((problem, problemIndex) =>
@@ -122,16 +138,16 @@ export function AdminRoomEditor({
     );
   }
 
-  function patchAssignment(index: number, patch: Partial<AssignmentRow>) {
-    setAssignments((current) =>
+  function patchAssignmentDraft(index: number, patch: Partial<AssignmentRow>) {
+    setAssignmentDraft((current) =>
       current.map((assignment, assignmentIndex) =>
         assignmentIndex === index ? { ...assignment, ...patch } : assignment
       )
     );
   }
 
-  function moveAssignment(index: number, delta: -1 | 1) {
-    setAssignments((current) => {
+  function moveAssignmentDraft(index: number, delta: -1 | 1) {
+    setAssignmentDraft((current) => {
       const nextIndex = index + delta;
       if (nextIndex < 0 || nextIndex >= current.length) {
         return current;
@@ -180,35 +196,25 @@ export function AdminRoomEditor({
           <button
             type="button"
             className="button button--primary button--compact"
-            disabled={busyKey === "assignments"}
-            onClick={saveAssignments}
+            disabled={busyKey === "assignments" || assignments.length === 0}
+            onClick={openOrganizer}
           >
-            {busyKey === "assignments" ? "保存中..." : "一括確定"}
+            表示順と採用をまとめて編集
           </button>
         </div>
-        <div className="admin-room-list">
-          {assignments.map((assignment, index) => {
-            const activeOrder = assignment.isActive
-              ? assignments.slice(0, index + 1).filter((row) => row.isActive).length
-              : 0;
-            const problem = problemById.get(assignment.problemId);
-
-            return (
-              <AssignmentForm
-                key={assignment.problemId}
-                row={{
-                  ...assignment,
-                  roomCode: problem?.roomCode ?? assignment.roomCode,
-                  answersText: problem?.answersText ?? assignment.answersText
-                }}
-                index={index}
-                activeOrder={activeOrder}
-                onChange={(patch) => patchAssignment(index, patch)}
-                onMove={moveAssignment}
-              />
-            );
-          })}
-        </div>
+        {organizing ? (
+          <AssignmentOrganizer
+            rows={assignmentDraft}
+            problemById={problemById}
+            busy={busyKey === "assignments"}
+            onChange={patchAssignmentDraft}
+            onMove={moveAssignmentDraft}
+            onSave={() => saveAssignments(assignmentDraft)}
+            onCancel={closeOrganizer}
+          />
+        ) : (
+          <AssignmentSummary rows={assignments} problemById={problemById} />
+        )}
       </div>
     </section>
   );
@@ -277,6 +283,118 @@ function ProblemForm({
         ) : null}
       </div>
     </form>
+  );
+}
+
+function AssignmentSummary({
+  rows,
+  problemById
+}: {
+  rows: AssignmentRow[];
+  problemById: Map<string, EditableProblem>;
+}) {
+  return (
+    <div className="admin-room-list">
+      {rows.map((assignment, index) => {
+        const activeOrder = assignment.isActive
+          ? rows.slice(0, index + 1).filter((row) => row.isActive).length
+          : 0;
+        const problem = problemById.get(assignment.problemId);
+        const roomCode = problem?.roomCode ?? assignment.roomCode;
+        const answersText = problem?.answersText ?? assignment.answersText;
+
+        return (
+          <div
+            className="admin-room-card admin-assignment-row"
+            key={assignment.problemId}
+          >
+            <div className="admin-assignment-treasure">
+              <span className="kicker">
+                {assignment.isActive ? treasureLabel(activeOrder) : "未採用"}
+              </span>
+            </div>
+            <label className="field admin-assignment-room">
+              部屋番号
+              <input value={roomCode} className="input" readOnly />
+            </label>
+            <label className="field admin-assignment-answer">
+              解答
+              <input value={answersText.replace(/\r?\n/g, " / ")} className="input" readOnly />
+            </label>
+            <div className="admin-assignment-actions">
+              <span className="muted">{assignment.isActive ? "採用中" : "候補"}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function AssignmentOrganizer({
+  rows,
+  problemById,
+  busy,
+  onChange,
+  onMove,
+  onSave,
+  onCancel
+}: {
+  rows: AssignmentRow[];
+  problemById: Map<string, EditableProblem>;
+  busy: boolean;
+  onChange: (index: number, patch: Partial<AssignmentRow>) => void;
+  onMove: (index: number, delta: -1 | 1) => void;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="admin-assignment-organizer">
+      <p className="lead lead--small">
+        この画面内で順番と採用状態をまとめて調整し、確定時に一括保存します。採用中の行に上から順に宝A〜Zが割り当たります。
+      </p>
+      <div className="admin-room-list">
+        {rows.map((assignment, index) => {
+          const activeOrder = assignment.isActive
+            ? rows.slice(0, index + 1).filter((row) => row.isActive).length
+            : 0;
+          const problem = problemById.get(assignment.problemId);
+
+          return (
+            <AssignmentForm
+              key={assignment.problemId}
+              row={{
+                ...assignment,
+                roomCode: problem?.roomCode ?? assignment.roomCode,
+                answersText: problem?.answersText ?? assignment.answersText
+              }}
+              index={index}
+              activeOrder={activeOrder}
+              onChange={(patch) => onChange(index, patch)}
+              onMove={onMove}
+            />
+          );
+        })}
+      </div>
+      <div className="action-row">
+        <button
+          type="button"
+          className="button button--primary button--compact"
+          disabled={busy}
+          onClick={onSave}
+        >
+          {busy ? "保存中..." : "確定して保存"}
+        </button>
+        <button
+          type="button"
+          className="button button--secondary button--compact"
+          disabled={busy}
+          onClick={onCancel}
+        >
+          キャンセル
+        </button>
+      </div>
+    </div>
   );
 }
 
