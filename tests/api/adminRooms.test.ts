@@ -157,6 +157,35 @@ describe("admin room service", () => {
     expect(room?.isActive).toBe(true);
     expect(explored.resultType).toBe("show_puzzle");
   });
+
+  it("reuses an existing room when a reassigned problem has the same room code", async () => {
+    const service = makeService();
+    const initial = await service.listAdminRooms(DEFAULT_EVENT_ID);
+    const problem1 = initial.problems.find((item) => item.problemNumber === 1);
+    const problem2 = initial.problems.find((item) => item.problemNumber === 2);
+
+    await service.saveAdminProblem(DEFAULT_EVENT_ID, {
+      id: problem2?.id,
+      roomCode: "305",
+      puzzleImageUrl: "/puzzles/frame-02.png",
+      answers: ["ほし"]
+    });
+    await service.saveAdminAssignments(DEFAULT_EVENT_ID, {
+      assignments: [
+        { problemId: problem1?.id, isActive: false },
+        { problemId: problem2?.id, isActive: true }
+      ]
+    });
+
+    const afterSave = await service.listAdminRooms(DEFAULT_EVENT_ID);
+    const rooms305 = afterSave.rooms.filter((item) => item.normalizedRoomCode === "305");
+    const reassignedRoom = afterSave.rooms.find(
+      (item) => item.problemId === problem2?.id && item.normalizedRoomCode === "305"
+    );
+
+    expect(rooms305).toHaveLength(1);
+    expect(reassignedRoom?.isActive).toBe(true);
+  });
 });
 
 function makeService() {

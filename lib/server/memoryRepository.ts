@@ -384,14 +384,22 @@ export function createMemoryRepository(
     async saveAssignments(eventId, assignments) {
       readLatest();
       let sortOrder = 1;
+      const assignedProblemIds = new Set<string>();
+      const usedRoomIds = new Set<string>();
 
       for (const assignment of assignments) {
         const problem = state.problemBank.find((item) => item.id === assignment.problemId);
         if (!problem) {
           continue;
         }
+        assignedProblemIds.add(problem.id);
 
         const currentRoom =
+          state.rooms.find(
+            (room) =>
+              room.eventId === eventId &&
+              room.normalizedRoomCode === problem.normalizedRoomCode
+          ) ??
           state.rooms.find(
             (room) => room.eventId === eventId && room.problemId === problem.id
           ) ??
@@ -420,6 +428,20 @@ export function createMemoryRepository(
             createAnswer(room.id, answer, normalizeAnswer(answer), new Date().toISOString())
           )
         );
+        usedRoomIds.add(room.id);
+      }
+
+      for (const room of state.rooms) {
+        if (
+          room.eventId !== eventId ||
+          usedRoomIds.has(room.id) ||
+          !assignedProblemIds.has(room.problemId ?? "")
+        ) {
+          continue;
+        }
+        room.problemId = null;
+        room.isActive = false;
+        room.sortOrder = 0;
       }
 
       persist();

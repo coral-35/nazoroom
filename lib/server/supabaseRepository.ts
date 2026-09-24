@@ -415,17 +415,27 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
       const problems = await this.listProblemBank();
       const currentRooms = await this.listAdminRooms(eventId);
       let sortOrder = 1;
+      const assignedProblemIds = new Set<string>();
+      const usedRoomIds = new Set<string>();
 
       for (const assignment of assignments) {
         const problem = problems.find((item) => item.id === assignment.problemId);
         if (!problem) {
           continue;
         }
+        assignedProblemIds.add(problem.id);
 
         const currentRoom =
+          currentRooms.find(
+            (room) => room.normalizedRoomCode === problem.normalizedRoomCode
+          ) ??
           currentRooms.find((room) => room.problemId === problem.id) ??
-          currentRooms.find((room) => room.id === assignment.roomId);
+          currentRooms.find((room) => room.id === assignment.roomId) ??
+          null;
         const isActive = assignment.isActive;
+        if (currentRoom) {
+          usedRoomIds.add(currentRoom.id);
+        }
 
         await upsertRoomRow(client, {
           eventId,
@@ -439,6 +449,27 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
           answers: problem.defaultAnswers.map((answer) => ({
             answerText: answer,
             normalizedAnswer: normalizeAnswer(answer)
+          }))
+        });
+      }
+
+      for (const room of currentRooms) {
+        if (!room.id || usedRoomIds.has(room.id) || !assignedProblemIds.has(room.problemId ?? "")) {
+          continue;
+        }
+
+        await upsertRoomRow(client, {
+          eventId,
+          roomId: room.id,
+          problemId: null,
+          roomCode: room.roomCode,
+          normalizedRoomCode: room.normalizedRoomCode,
+          puzzleImageUrl: room.puzzleImageUrl,
+          sortOrder: 0,
+          isActive: false,
+          answers: room.answers.map((answer) => ({
+            answerText: answer.answerText,
+            normalizedAnswer: answer.normalizedAnswer
           }))
         });
       }

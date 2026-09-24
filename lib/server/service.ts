@@ -607,8 +607,7 @@ function parseAdminAssignments(rawAssignments: unknown): AdminAssignmentInput[] 
     throw new AppError("表示順の入力内容を確認してください。", 400);
   }
 
-  const activeAssignments: AdminAssignmentInput[] = [];
-  const inactiveAssignments: AdminAssignmentInput[] = [];
+  const assignments: AdminAssignmentInput[] = [];
   const seen = new Set<string>();
 
   for (const rawAssignment of assignmentRows) {
@@ -629,18 +628,14 @@ function parseAdminAssignments(rawAssignments: unknown): AdminAssignmentInput[] 
       isActive: input.isActive === true
     };
 
-    if (assignment.isActive) {
-      activeAssignments.push(assignment);
-    } else {
-      inactiveAssignments.push(assignment);
-    }
+    assignments.push(assignment);
   }
 
-  if (activeAssignments.length > 26) {
+  if (assignments.filter((assignment) => assignment.isActive).length > 26) {
     throw new AppError("有効な問題は26件以内にしてください。", 400);
   }
 
-  return [...activeAssignments, ...inactiveAssignments];
+  return assignments;
 }
 
 function parseRequiredText(input: unknown, maxLength: number) {
