@@ -9,6 +9,7 @@ export default async function JoinPage() {
   return (
     <main className="page-shell page-shell--center">
       <div>
+        <p className="kicker">謎解きダンジョン</p>
         <h1 className="page-title">参加する</h1>
         <p className="lead">
           ニックネームを登録すると、探索画面に進みます。

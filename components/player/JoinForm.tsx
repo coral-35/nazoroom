@@ -84,7 +84,7 @@ export function JoinForm({
           onChange={(event) => setNickname(event.target.value)}
           maxLength={32}
           className="input"
-          placeholder="テスト太郎"
+          placeholder="参加者名"
           autoComplete="nickname"
         />
       </label>
