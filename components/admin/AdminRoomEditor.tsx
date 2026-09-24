@@ -86,13 +86,13 @@ export function AdminRoomEditor({
       const response = await fetch(`${apiBasePath}/assignments`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(
-          assignments.map((assignment) => ({
+        body: JSON.stringify({
+          assignments: assignments.map((assignment) => ({
             problemId: assignment.problemId,
             roomId: assignment.roomId,
             isActive: assignment.isActive
           }))
-        )
+        })
       });
       const data = (await response.json()) as AdminRoomsResponse | { message?: string };
 

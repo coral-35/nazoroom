@@ -593,7 +593,17 @@ function parseAdminProblemInput(rawProblem: unknown): AdminProblemInput {
 }
 
 function parseAdminAssignments(rawAssignments: unknown): AdminAssignmentInput[] {
-  if (!Array.isArray(rawAssignments)) {
+  const assignmentRows =
+    Array.isArray(rawAssignments)
+      ? rawAssignments
+      : rawAssignments &&
+          typeof rawAssignments === "object" &&
+          !Array.isArray(rawAssignments) &&
+          Array.isArray((rawAssignments as Record<string, unknown>).assignments)
+        ? (rawAssignments as { assignments: unknown[] }).assignments
+        : null;
+
+  if (!assignmentRows) {
     throw new AppError("表示順の入力内容を確認してください。", 400);
   }
 
@@ -601,7 +611,7 @@ function parseAdminAssignments(rawAssignments: unknown): AdminAssignmentInput[] 
   const inactiveAssignments: AdminAssignmentInput[] = [];
   const seen = new Set<string>();
 
-  for (const rawAssignment of rawAssignments) {
+  for (const rawAssignment of assignmentRows) {
     if (!rawAssignment || typeof rawAssignment !== "object" || Array.isArray(rawAssignment)) {
       throw new AppError("表示順の入力内容を確認してください。", 400);
     }
