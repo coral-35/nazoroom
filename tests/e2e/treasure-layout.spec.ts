@@ -73,12 +73,40 @@ test("compact collection stays below inputs and reveals acquired Z", async ({ pa
     await page.setViewportSize({ width, height: 667 });
     const result = await page.getByLabel("自分の結果").boundingBox();
     const timer = await page.locator(".timer-box").boundingBox();
+    const controls = await page.locator(".control-bar").boundingBox();
     expect(result!.x + result!.width).toBeLessThan(timer!.x);
     expect(result!.y).toBe(timer!.y);
-    const collection = await page.locator(".treasure-panel").boundingBox();
     const ranking = await page.locator(".result-ranking").boundingBox();
-    expect(ranking!.y).toBeGreaterThan(collection!.y + collection!.height);
+    expect(ranking!.y + ranking!.height).toBeLessThan(controls!.y);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   }
-  await expect(page.locator(".play-shell > :last-child")).toHaveClass("result-ranking");
+  await expect(page.locator(".play-shell > .result-ranking + .control-bar")).toHaveCount(1);
+});
+
+test("closed exploration shows waiting notice above disabled controls", async ({ page }) => {
+  await page.route("**/api/events/*/state?*", (route) => route.fulfill({ json: {
+    event: {
+      id: "closed",
+      title: "謎解きダンジョン",
+      status: "active",
+      startsAt: "2026-07-09T09:00:00.000Z",
+      endsAt: "2026-07-09T10:00:00.000Z",
+      durationMinutes: 60
+    },
+    player: { id: "closed-player", nickname: "テスト" },
+    explorationLogs: [],
+    clearedRooms: [],
+    ranking: null
+  } }));
+
+  await page.goto("/events/closed/play?playerId=closed-player");
+  await expect(page.getByRole("heading", { name: "結果発表待ち" })).toBeVisible();
+  await expect(page.getByText("探索時間は終了しました。")).toBeVisible();
+  await page.getByPlaceholder("部屋番号を入力").fill("305");
+  await expect(page.getByRole("button", { name: "探索", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "解答", exact: true })).toBeDisabled();
+
+  const waiting = await page.locator(".result-waiting").boundingBox();
+  const controls = await page.locator(".control-bar").boundingBox();
+  expect(waiting!.y + waiting!.height).toBeLessThan(controls!.y);
 });

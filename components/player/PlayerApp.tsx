@@ -143,10 +143,12 @@ export function PlayerApp({
       return;
     }
 
+    if (state.event.status === "ended" || state.event.endsAt) {
+      setTimeUp(true);
+      return;
+    }
+
     if (state.event.status !== "active" || !state.event.startsAt) {
-      if (state.event.status === "ended" || state.event.endsAt) {
-        setTimeUp(true);
-      }
       return;
     }
 
@@ -368,6 +370,23 @@ export function PlayerApp({
         </div>
       </header>
 
+      {!ranking && timeUp ? (
+        <section className="result-waiting" aria-label="探索終了">
+          <div className="panel panel--tight">
+            <h2 className="card-title">結果発表待ち</h2>
+            <p className="lead lead--small">
+              探索時間は終了しました。結果発表まで部屋の探索と解答はできません。
+            </p>
+          </div>
+        </section>
+      ) : null}
+
+      {ranking ? (
+        <section className="result-ranking">
+          <RankingTable ranking={ranking} />
+        </section>
+      ) : null}
+
       <section className="control-bar">
         <ExplorePanel
           roomCode={roomCode}
@@ -389,23 +408,6 @@ export function PlayerApp({
       </section>
 
       <ClearedRoomList clearedRooms={clearedRooms} />
-
-      {!ranking && timeUp ? (
-        <section className="result-waiting">
-          <div className="panel panel--tight">
-            <h2 className="card-title">結果発表待ち</h2>
-            <p className="lead lead--small">
-              探索時間は終了しました。管理者が結果発表を行うとランキングを確認できます。
-            </p>
-          </div>
-        </section>
-      ) : null}
-
-      {ranking ? (
-        <section className="result-ranking">
-          <RankingTable ranking={ranking} />
-        </section>
-      ) : null}
     </main>
   );
 }
