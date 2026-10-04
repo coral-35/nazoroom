@@ -256,11 +256,10 @@ export function createNazoroomService(
         throw new AppError("参加情報が確認できません。再参加してください。", 404);
       }
 
-      const [explorationLogs, clearedRooms, ranking, rooms] = await Promise.all([
+      const [explorationLogs, clearedRooms, ranking] = await Promise.all([
         repository.listExplorationCards(eventId, playerId),
         repository.listPlayerClears(eventId, playerId),
-        event.status === "ended" ? calculateEventRanking(repository, eventId) : null,
-        repository.listRooms(eventId)
+        event.status === "ended" ? calculateEventRanking(repository, eventId) : null
       ]);
 
       return {
@@ -272,7 +271,7 @@ export function createNazoroomService(
         explorationLogs,
         clearedRooms: clearedRooms.map((clearedRoom) => ({
           roomCode: clearedRoom.roomCode,
-          treasureName: treasureNameForOrder(rooms.find((room) => room.id === clearedRoom.roomId)?.sortOrder),
+          treasureName: treasureNameForOrder(clearedRoom.roomSortOrder),
           clearedAt: clearedRoom.clearedAt
         })),
         ranking

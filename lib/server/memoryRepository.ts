@@ -662,6 +662,7 @@ function makeClear(input: CreateClearInput): PlayerClearRecord {
     playerId: input.playerId,
     roomId: input.room.id,
     roomCode: input.room.roomCode,
+    roomSortOrder: input.room.sortOrder,
     clearedAt: new Date().toISOString()
   };
 }

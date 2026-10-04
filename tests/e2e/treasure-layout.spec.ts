@@ -68,6 +68,7 @@ test("compact collection stays below inputs and reveals acquired Z", async ({ pa
   await page.reload();
   await expect(page.getByText("宝Z", { exact: true })).toBeVisible();
   published = true;
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect(page.getByLabel("自分の結果")).toHaveText("結果12点 / 2位");
   for (const width of [320, 393, 768]) {
     await page.setViewportSize({ width, height: 667 });

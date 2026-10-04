@@ -226,7 +226,7 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
     async listPlayerClears(eventId, playerId) {
       const { data, error } = await client
         .from("player_cleared_rooms")
-        .select("*, rooms(room_code)")
+        .select("*, rooms(room_code, sort_order)")
         .eq("event_id", eventId)
         .eq("player_id", playerId)
         .order("cleared_at", { ascending: true });
@@ -279,7 +279,7 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
     async getPlayerClear(eventId, playerId, roomId) {
       const { data, error } = await client
         .from("player_cleared_rooms")
-        .select("*, rooms(room_code)")
+        .select("*, rooms(room_code, sort_order)")
         .eq("event_id", eventId)
         .eq("player_id", playerId)
         .eq("room_id", roomId)
@@ -309,7 +309,7 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
           player_id: input.playerId,
           room_id: input.room.id
         })
-        .select("*, rooms(room_code)")
+        .select("*, rooms(room_code, sort_order)")
         .single();
 
       if (error) {
@@ -480,7 +480,7 @@ export function createSupabaseRepository(client: SupabaseClient): NazoroomReposi
     async listAllClears(eventId) {
       const { data, error } = await client
         .from("player_cleared_rooms")
-        .select("*, rooms(room_code)")
+        .select("*, rooms(room_code, sort_order)")
         .eq("event_id", eventId)
         .order("cleared_at", { ascending: true });
 
@@ -792,6 +792,7 @@ function mapPlayerClear(row: any): PlayerClearRecord {
     playerId: row.player_id,
     roomId: row.room_id,
     roomCode: room?.room_code ?? row.room_code ?? "",
+    roomSortOrder: typeof room?.sort_order === "number" ? room.sort_order : undefined,
     clearedAt: row.cleared_at
   };
 }

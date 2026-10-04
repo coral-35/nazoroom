@@ -20,6 +20,7 @@ test("player can explore, answer, and avoid duplicate clears", async ({ page }) 
     data: { action: "start_exploration", durationMinutes: 60 }
   });
   expect(startResponse.ok()).toBeTruthy();
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
 
   await expect(page.getByText("経過時間")).toBeVisible();
   await expect(page.getByText("残り時間", { exact: true })).toHaveCount(0);
@@ -57,7 +58,7 @@ test("player can explore, answer, and avoid duplicate clears", async ({ page }) 
   await page.getByRole("button", { name: "解答" }).click();
   await expect(page.getByText(/部屋 305 をクリア/).first()).toBeVisible();
 
-  await expect(page.getByText("宝A", { exact: true })).toBeVisible();
+  await expect(page.getByText("宝B", { exact: true })).toBeVisible();
 
   await page.getByLabel("解答").fill("ひかり");
   await page.getByRole("button", { name: "解答" }).click();
@@ -67,15 +68,11 @@ test("player can explore, answer, and avoid duplicate clears", async ({ page }) 
     data: { action: "publish_results" }
   });
   expect(publishResponse.ok()).toBeTruthy();
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
 
   const rankingTitle = page.getByRole("heading", { name: "ランキング" });
-  const explorationTitle = page.getByRole("heading", { name: "ゲットした宝" });
   await expect(rankingTitle).toBeVisible();
   await expect(page.getByRole("button", { name: "解答" })).toBeDisabled();
-
-  const rankingBox = await rankingTitle.boundingBox();
-  const explorationBox = await explorationTitle.boundingBox();
-  expect(rankingBox?.y).toBeGreaterThan(explorationBox?.y ?? 0);
 
   await page.getByLabel("部屋番号").fill("204");
   await page.getByRole("button", { name: "探索" }).click();

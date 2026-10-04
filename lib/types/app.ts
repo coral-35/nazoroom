@@ -86,6 +86,7 @@ export type PlayerClearRecord = {
   playerId: string;
   roomId: string;
   roomCode: string;
+  roomSortOrder?: number;
   clearedAt: string;
 };
 

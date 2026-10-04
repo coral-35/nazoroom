@@ -8,6 +8,7 @@ import { ExplorePanel } from "@/components/player/ExplorePanel";
 import { PuzzleCarousel } from "@/components/player/PuzzleCarousel";
 import { RankingTable } from "@/components/player/RankingTable";
 import { ClearedRoomList } from "@/components/player/ClearedRoomList";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   findCachedPlayer,
   playerCacheKey,
@@ -175,12 +176,50 @@ export function PlayerApp({
       return;
     }
 
-    const intervalId = window.setInterval(() => {
-      void loadState(playerId, true);
-    }, 2_000);
+    const refreshOnResume = () => {
+      if (document.visibilityState === "visible") {
+        void loadState(playerId, true);
+      }
+    };
 
-    return () => window.clearInterval(intervalId);
+    window.addEventListener("focus", refreshOnResume);
+    document.addEventListener("visibilitychange", refreshOnResume);
+    return () => {
+      window.removeEventListener("focus", refreshOnResume);
+      document.removeEventListener("visibilitychange", refreshOnResume);
+    };
   }, [loadState, playerId, state?.event.status]);
+
+  useEffect(() => {
+    if (!playerId || state?.event.status === "ended") {
+      return;
+    }
+
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) {
+      return;
+    }
+
+    const channel = supabase
+      .channel(`nazoroom:event:${eventId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "events",
+          filter: `id=eq.${eventId}`
+        },
+        () => {
+          void loadState(playerId, true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [eventId, loadState, playerId, state?.event.status]);
 
   const waiting = state?.event.status === "draft";
   const exploreDisabled =
